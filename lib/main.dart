@@ -4,7 +4,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'firebase_options.dart';
-import 'package:video_player/video_player.dart';
+import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
