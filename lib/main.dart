@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:fl_chart/fl_chart.dart'; // fl_chart 임포트 추가
+import 'package:fl_chart/fl_chart.dart';
 import 'firebase_options.dart';
-import 'package:video_player/video_player.dart'; // 비디오 플레이어 패키지 추가
+import 'package:video_player/video_player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,8 +42,12 @@ class _MyHomePageState extends State<MyHomePage> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
   bool showAvg = false;
-  List<FlSpot> temp1Spots = []; // temp1 데이터를 위한 리스트
-  late VideoPlayerController _controller; // 비디오 컨트롤러
+  List<FlSpot> temp1Spots = [];
+  List<FlSpot> temp2Spots = [];
+  List<FlSpot> temp3Spots = [];
+  late VideoPlayerController _controller;
+  double motorRpm = 0.0;
+  double targetTemperature = 0.0;
 
   @override
   void initState() {
@@ -54,16 +58,15 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         if (value != null) {
           _data = value.cast<String, dynamic>();
-          _updateTemp1Data(); // temp1 데이터 업데이트
+          _updateTempData(); // temp 데이터 업데이트
         } else {
           _data = {};
         }
       });
     });
 
-    // 비디오 컨트롤러 초기화
     _controller = VideoPlayerController.network(
-      'https://www.example.com/streaming-url', // 스트리밍 URL로 대체
+      'rtsp://210.99.70.120:1935/live/cctv001.stream',
     )
       ..initialize().then((_) {
         setState(() {});
@@ -73,17 +76,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _controller.dispose(); // 비디오 컨트롤러 해제
+    _controller.dispose();
     super.dispose();
   }
 
-  void _updateTemp1Data() {
-    if (_data.containsKey('temp1')) {
-      double temp1Value = double.tryParse(_data['temp1'].toString()) ?? 0.0;
-      if (temp1Spots.length >= 60) {
-        temp1Spots.removeAt(0); // 60개의 데이터를 초과하면 가장 오래된 데이터 제거
+  void _updateTempData() {
+    _updateTemp('temp1', temp1Spots);
+    _updateTemp('temp2', temp2Spots);
+    _updateTemp('temp3', temp3Spots);
+  }
+
+  void _updateTemp(String key, List<FlSpot> spots) {
+    if (_data.containsKey(key)) {
+      double value = double.tryParse(_data[key].toString()) ?? 0.0;
+      if (spots.length >= 60) {
+        spots.removeAt(0);
       }
-      temp1Spots.add(FlSpot(temp1Spots.length.toDouble(), temp1Value));
+      spots.add(FlSpot(spots.length.toDouble(), value));
     }
   }
 
@@ -92,13 +101,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Colors.green, // 앱바 색상 변경
+        backgroundColor: Colors.lightBlue, // 앱바 색상을 밝은 색으로 변경
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: () {
               setState(() {
-                // 데이터 새로 고침 로직 추가
                 _databaseReference = FirebaseDatabase.instance.ref();
               });
             },
@@ -138,36 +146,54 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _buildStreamingView(), // 스트리밍 화면 추가
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildDataItem('temp1'),
-                _buildDataItem('temp2'),
-                _buildDataItem('temp3'),
-              ],
-            ),
-            SizedBox(height: 20),
-            _buildGraph(), // 그래프 추가
-          ],
+      body: Container(
+        color: Colors.grey[200], // 밝은 배경 색상으로 변경
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _buildStreamingView(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildDataItem('temp1'),
+                  _buildDataItem('temp2'),
+                  _buildDataItem('temp3'),
+                ],
+              ),
+              SizedBox(height: 20),
+              _buildGraph(),
+              SizedBox(height: 20),
+              _buildSlider('Motor RPM', motorRpm, (value) {
+                setState(() {
+                  motorRpm = value;
+                  _databaseReference.child('motorRpm').set(motorRpm);
+                });
+              }),
+              _buildSlider('Target Temperature', targetTemperature, (value) {
+                setState(() {
+                  targetTemperature = value;
+                  _databaseReference.child('targetTemperature').set(targetTemperature);
+                });
+              }),
+              Container(
+                color: Colors.lightBlue[50], // 하얀 부분을 밝은 색상으로 변경
+                height: 100,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // temp1, temp2, temp3 값을 표시하는 위젯
   Widget _buildDataItem(String key) {
     return Text(
       '$key: ${_data[key]?.toString() ?? 'Loading...'}',
-      style: TextStyle(fontSize: 20),
+      style: TextStyle(fontSize: 20, color: Colors.black), // 밝은 배경에 맞는 텍스트 색상 변경
     );
   }
 
-  // 스트리밍 화면을 표시하는 위젯
   Widget _buildStreamingView() {
     return _controller.value.isInitialized
         ? AspectRatio(
@@ -180,7 +206,6 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // 그래프를 표시하는 위젯
   Widget _buildGraph() {
     return SafeArea(
       child: Column(
@@ -189,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Text(
               showAvg ? '평균값 O' : '평균값 X',
               style: TextStyle(
-                color: showAvg ? Colors.white.withOpacity(0.5) : Colors.white,
+                color: showAvg ? Colors.black.withOpacity(0.5) : Colors.black, // 밝은 배경에 맞는 텍스트 색상 변경
               ),
             ),
             onPressed: () {
@@ -205,10 +230,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 borderRadius: BorderRadius.all(
                   Radius.circular(10),
                 ),
-                color: Color(0xff232d37),
+                color: Colors.white, // 그래프 배경을 밝은 색상으로 변경
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20), // 좌우 여백 추가
+                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 child: LineChart(
                   showAvg ? avgChart() : mainChart(),
                 ),
@@ -220,12 +245,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // 주 그래프 데이터 설정
   LineChartData mainChart() {
-    List<Color> gradientColors = [
-      const Color(0xff23b6e6),
-      const Color(0xff02d39a),
-    ];
+    List<Color> gradientColors1 = [const Color(0xff23b6e6), const Color(0xff02d39a)];
+    List<Color> gradientColors2 = [const Color(0xffff0000), const Color(0xff800000)];
+    List<Color> gradientColors3 = [const Color(0xff8b00ff), const Color(0xff4b0082)];
+
     return LineChartData(
       gridData: FlGridData(
         show: true,
@@ -234,13 +258,13 @@ class _MyHomePageState extends State<MyHomePage> {
         verticalInterval: 1,
         getDrawingHorizontalLine: (value) {
           return FlLine(
-            color: Color(0xff37434d),
+            color: Colors.grey,
             strokeWidth: 1,
           );
         },
         getDrawingVerticalLine: (value) {
           return FlLine(
-            color: Color(0xff37434d),
+            color: Colors.grey,
             strokeWidth: 1,
           );
         },
@@ -252,13 +276,12 @@ class _MyHomePageState extends State<MyHomePage> {
             showTitles: true,
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
-              // x축 값을 시간 값으로 설정
               final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
               final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 8.0,
-                child: Text(formattedTime, style: const TextStyle(color: Color(0xff68737d), fontWeight: FontWeight.bold, fontSize: 12)),
+                child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
               );
             },
           ),
@@ -272,7 +295,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 space: 12.0,
                 child: Text(
                   value.toString(),
-                  style: const TextStyle(color: Color(0xff67727d), fontWeight: FontWeight.bold, fontSize: 15),
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               );
             },
@@ -282,18 +305,18 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       borderData: FlBorderData(
         show: true,
-        border: Border.all(color: const Color(0xff37434d), width: 1),
+        border: Border.all(color: Colors.grey, width: 1),
       ),
       minX: 0,
       maxX: 59,
       minY: 0,
-      maxY: 6,
+      maxY: 100,
       lineBarsData: [
         LineChartBarData(
           spots: temp1Spots,
           isCurved: true,
           gradient: LinearGradient(
-            colors: gradientColors,
+            colors: gradientColors1,
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -303,7 +326,47 @@ class _MyHomePageState extends State<MyHomePage> {
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: gradientColors.map((color) => color.withOpacity(0.3)).toList(),
+              colors: gradientColors1.map((color) => color.withOpacity(0.3)).toList(),
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        LineChartBarData(
+          spots: temp2Spots,
+          isCurved: true,
+          gradient: LinearGradient(
+            colors: gradientColors2,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          barWidth: 5,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: gradientColors2.map((color) => color.withOpacity(0.3)).toList(),
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+        ),
+        LineChartBarData(
+          spots: temp3Spots,
+          isCurved: true,
+          gradient: LinearGradient(
+            colors: gradientColors3,
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          barWidth: 5,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: true),
+          belowBarData: BarAreaData(
+            show: true,
+            gradient: LinearGradient(
+              colors: gradientColors3.map((color) => color.withOpacity(0.3)).toList(),
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
@@ -313,12 +376,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  // 평균 그래프 데이터 설정
   LineChartData avgChart() {
-    List<Color> gradientColors = [
-      const Color(0xff23b6e6),
-      const Color(0xff02d39a),
-    ];
+    List<Color> gradientColors = [const Color(0xff23b6e6), const Color(0xff02d39a)];
     return LineChartData(
       lineTouchData: LineTouchData(enabled: false),
       gridData: FlGridData(
@@ -328,13 +387,13 @@ class _MyHomePageState extends State<MyHomePage> {
         verticalInterval: 1,
         getDrawingVerticalLine: (value) {
           return FlLine(
-            color: const Color(0xff37434d),
+            color: Colors.grey,
             strokeWidth: 1,
           );
         },
         getDrawingHorizontalLine: (value) {
           return FlLine(
-            color: const Color(0xff37434d),
+            color: Colors.grey,
             strokeWidth: 1,
           );
         },
@@ -346,12 +405,12 @@ class _MyHomePageState extends State<MyHomePage> {
             showTitles: true,
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
-              final DateTime time = DateTime.now().subtract(Duration(seconds: (30 - value.toInt())));
+              final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
               final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 8.0,
-                child: Text(formattedTime, style: const TextStyle(color: Color(0xff68737d), fontWeight: FontWeight.bold, fontSize: 12)),
+                child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
               );
             },
           ),
@@ -365,7 +424,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 space: 12.0,
                 child: Text(
                   value.toString(),
-                  style: const TextStyle(color: Color(0xff67727d), fontWeight: FontWeight.bold, fontSize: 15),
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               );
             },
@@ -375,15 +434,15 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       borderData: FlBorderData(
         show: true,
-        border: Border.all(color: const Color(0xff37434d), width: 1),
+        border: Border.all(color: Colors.grey, width: 1),
       ),
       minX: 0,
       maxX: 59,
       minY: 0,
-      maxY: 6,
+      maxY: 100,
       lineBarsData: [
         LineChartBarData(
-          spots: List.generate(60, (index) => FlSpot(index.toDouble(), 3.44)), // 예제 평균 데이터
+          spots: List.generate(60, (index) => FlSpot(index.toDouble(), 50)), // 예제 평균 데이터
           isCurved: true,
           gradient: LinearGradient(
             colors: [
@@ -407,6 +466,22 @@ class _MyHomePageState extends State<MyHomePage> {
               end: Alignment.centerRight,
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSlider(String label, double value, ValueChanged<double> onChanged) {
+    return Column(
+      children: [
+        Text(label, style: TextStyle(fontSize: 16, color: Colors.black)),
+        Slider(
+          value: value,
+          min: 0,
+          max: 100,
+          divisions: 100,
+          label: value.round().toString(),
+          onChanged: onChanged,
         ),
       ],
     );
