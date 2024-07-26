@@ -13,11 +13,18 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+
+  // Obtain a list of available cameras
+  final cameras = await availableCameras();
+  final firstCamera = cameras.first;
+
+  runApp(MyApp(camera: firstCamera));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final CameraDescription camera;
+
+  const MyApp({Key? key, required this.camera}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -27,15 +34,16 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Bio-reactor Home Page'),
+      home: MyHomePage(title: 'Bio-reactor Home Page', camera: camera),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
   final String title;
+  final CameraDescription camera;
+
+  const MyHomePage({Key? key, required this.title, required this.camera}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -47,9 +55,10 @@ class _MyHomePageState extends State<MyHomePage> {
   List<FlSpot> temp1Spots = [];
   List<FlSpot> temp2Spots = [];
   List<FlSpot> temp3Spots = [];
-  late VideoPlayerController _controller;
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
+
+  late CameraController _cameraController;
 
   @override
   void initState() {
@@ -69,13 +78,17 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
 
-    _controller = VideoPlayerController.network(
-      'https://www.example.com/streaming-url',
-    )
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
+    _cameraController = CameraController(
+      widget.camera,
+      ResolutionPreset.high,
+    );
+
+    _cameraController.initialize().then((_) {
+      setState(() {});
+      _cameraController.startImageStream((image) {
+        // Optionally handle image stream data here
       });
+    });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Message received: ${message.notification?.title}');
@@ -89,7 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _cameraController.dispose();
     super.dispose();
   }
 
@@ -285,10 +298,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildStreamingView() {
-    return _controller.value.isInitialized
+    return _cameraController.value.isInitialized
         ? AspectRatio(
-      aspectRatio: _controller.value.aspectRatio,
-      child: VideoPlayer(_controller),
+      aspectRatio: _cameraController.value.aspectRatio,
+      child: CameraPreview(_cameraController),
     )
         : Container(
       height: 200,
