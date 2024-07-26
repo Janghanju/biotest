@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:fl_chart/fl_chart.dart'; // fl_chart 임포트 추가
 import 'firebase_options.dart';
+import 'package:video_player/video_player.dart'; // 비디오 플레이어 패키지 추가
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +41,9 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  bool showAvg = false; // showAvg 변수 추가
+  bool showAvg = false;
+  List<FlSpot> temp1Spots = []; // temp1 데이터를 위한 리스트
+  late VideoPlayerController _controller; // 비디오 컨트롤러
 
   @override
   void initState() {
@@ -51,11 +54,37 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         if (value != null) {
           _data = value.cast<String, dynamic>();
+          _updateTemp1Data(); // temp1 데이터 업데이트
         } else {
           _data = {};
         }
       });
     });
+
+    // 비디오 컨트롤러 초기화
+    _controller = VideoPlayerController.network(
+      'https://www.example.com/streaming-url', // 스트리밍 URL로 대체
+    )
+      ..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // 비디오 컨트롤러 해제
+    super.dispose();
+  }
+
+  void _updateTemp1Data() {
+    if (_data.containsKey('temp1')) {
+      double temp1Value = double.tryParse(_data['temp1'].toString()) ?? 0.0;
+      if (temp1Spots.length >= 60) {
+        temp1Spots.removeAt(0); // 60개의 데이터를 초과하면 가장 오래된 데이터 제거
+      }
+      temp1Spots.add(FlSpot(temp1Spots.length.toDouble(), temp1Value));
+    }
   }
 
   @override
@@ -113,9 +142,15 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            _buildDataItem('temp1'),
-            _buildDataItem('temp2'),
-            _buildDataItem('temp3'),
+            _buildStreamingView(), // 스트리밍 화면 추가
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildDataItem('temp1'),
+                _buildDataItem('temp2'),
+                _buildDataItem('temp3'),
+              ],
+            ),
             SizedBox(height: 20),
             _buildGraph(), // 그래프 추가
           ],
@@ -124,6 +159,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // temp1, temp2, temp3 값을 표시하는 위젯
   Widget _buildDataItem(String key) {
     return Text(
       '$key: ${_data[key]?.toString() ?? 'Loading...'}',
@@ -131,6 +167,20 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // 스트리밍 화면을 표시하는 위젯
+  Widget _buildStreamingView() {
+    return _controller.value.isInitialized
+        ? AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: VideoPlayer(_controller),
+    )
+        : Container(
+      height: 200,
+      child: Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  // 그래프를 표시하는 위젯
   Widget _buildGraph() {
     return SafeArea(
       child: Column(
@@ -158,7 +208,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 color: Color(0xff232d37),
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20), // 좌우 여백 추가
                 child: LineChart(
                   showAvg ? avgChart() : mainChart(),
                 ),
@@ -170,6 +220,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // 주 그래프 데이터 설정
   LineChartData mainChart() {
     List<Color> gradientColors = [
       const Color(0xff23b6e6),
@@ -201,30 +252,13 @@ class _MyHomePageState extends State<MyHomePage> {
             showTitles: true,
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
-              const style = TextStyle(
-                color: Color(0xff68737d),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              );
-              Widget text;
-              switch (value.toInt()) {
-                case 2:
-                  text = const Text('MAR', style: style);
-                  break;
-                case 5:
-                  text = const Text('JUN', style: style);
-                  break;
-                case 8:
-                  text = const Text('SEP', style: style);
-                  break;
-                default:
-                  text = const Text('', style: style);
-                  break;
-              }
+              // x축 값을 시간 값으로 설정
+              final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
+              final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 8.0,
-                child: text,
+                child: Text(formattedTime, style: const TextStyle(color: Color(0xff68737d), fontWeight: FontWeight.bold, fontSize: 12)),
               );
             },
           ),
@@ -233,30 +267,13 @@ class _MyHomePageState extends State<MyHomePage> {
           sideTitles: SideTitles(
             showTitles: true,
             getTitlesWidget: (value, meta) {
-              const style = TextStyle(
-                color: Color(0xff67727d),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              );
-              Widget text;
-              switch (value.toInt()) {
-                case 1:
-                  text = const Text('10k', style: style);
-                  break;
-                case 3:
-                  text = const Text('30k', style: style);
-                  break;
-                case 5:
-                  text = const Text('50k', style: style);
-                  break;
-                default:
-                  text = const Text('', style: style);
-                  break;
-              }
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 12.0,
-                child: text,
+                child: Text(
+                  value.toString(),
+                  style: const TextStyle(color: Color(0xff67727d), fontWeight: FontWeight.bold, fontSize: 15),
+                ),
               );
             },
             reservedSize: 28,
@@ -268,20 +285,12 @@ class _MyHomePageState extends State<MyHomePage> {
         border: Border.all(color: const Color(0xff37434d), width: 1),
       ),
       minX: 0,
-      maxX: 11,
+      maxX: 59,
       minY: 0,
       maxY: 6,
       lineBarsData: [
         LineChartBarData(
-          spots: [
-            FlSpot(0, 3),
-            FlSpot(2.6, 2),
-            FlSpot(4.9, 5),
-            FlSpot(6.8, 3.1),
-            FlSpot(8, 4),
-            FlSpot(9.5, 3),
-            FlSpot(11, 4),
-          ],
+          spots: temp1Spots,
           isCurved: true,
           gradient: LinearGradient(
             colors: gradientColors,
@@ -304,6 +313,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  // 평균 그래프 데이터 설정
   LineChartData avgChart() {
     List<Color> gradientColors = [
       const Color(0xff23b6e6),
@@ -336,30 +346,12 @@ class _MyHomePageState extends State<MyHomePage> {
             showTitles: true,
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
-              const style = TextStyle(
-                color: Color(0xff68737d),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              );
-              Widget text;
-              switch (value.toInt()) {
-                case 2:
-                  text = const Text('MAR', style: style);
-                  break;
-                case 5:
-                  text = const Text('JUN', style: style);
-                  break;
-                case 8:
-                  text = const Text('SEP', style: style);
-                  break;
-                default:
-                  text = const Text('', style: style);
-                  break;
-              }
+              final DateTime time = DateTime.now().subtract(Duration(seconds: (30 - value.toInt())));
+              final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 8.0,
-                child: text,
+                child: Text(formattedTime, style: const TextStyle(color: Color(0xff68737d), fontWeight: FontWeight.bold, fontSize: 12)),
               );
             },
           ),
@@ -368,30 +360,13 @@ class _MyHomePageState extends State<MyHomePage> {
           sideTitles: SideTitles(
             showTitles: true,
             getTitlesWidget: (value, meta) {
-              const style = TextStyle(
-                color: Color(0xff67727d),
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-              );
-              Widget text;
-              switch (value.toInt()) {
-                case 1:
-                  text = const Text('10k', style: style);
-                  break;
-                case 3:
-                  text = const Text('30k', style: style);
-                  break;
-                case 5:
-                  text = const Text('50k', style: style);
-                  break;
-                default:
-                  text = const Text('', style: style);
-                  break;
-              }
               return SideTitleWidget(
                 axisSide: meta.axisSide,
                 space: 12.0,
-                child: text,
+                child: Text(
+                  value.toString(),
+                  style: const TextStyle(color: Color(0xff67727d), fontWeight: FontWeight.bold, fontSize: 15),
+                ),
               );
             },
             reservedSize: 28,
@@ -403,20 +378,12 @@ class _MyHomePageState extends State<MyHomePage> {
         border: Border.all(color: const Color(0xff37434d), width: 1),
       ),
       minX: 0,
-      maxX: 11,
+      maxX: 59,
       minY: 0,
       maxY: 6,
       lineBarsData: [
         LineChartBarData(
-          spots: [
-            FlSpot(0, 3.44),
-            FlSpot(2.6, 3.44),
-            FlSpot(4.9, 3.44),
-            FlSpot(6.8, 3.44),
-            FlSpot(8, 3.44),
-            FlSpot(9.5, 3.44),
-            FlSpot(11, 3.44),
-          ],
+          spots: List.generate(60, (index) => FlSpot(index.toDouble(), 3.44)), // 예제 평균 데이터
           isCurved: true,
           gradient: LinearGradient(
             colors: [
