@@ -41,7 +41,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  bool showAvg = false;
   List<FlSpot> temp1Spots = [];
   List<FlSpot> temp2Spots = [];
   List<FlSpot> temp3Spots = [];
@@ -58,7 +57,7 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         if (value != null) {
           _data = value.cast<String, dynamic>();
-          _updateTempData(); // temp 데이터 업데이트
+          _updateTempData();
         } else {
           _data = {};
         }
@@ -66,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     _controller = VideoPlayerController.network(
-      'rtsp://210.99.70.120:1935/live/cctv001.stream',
+      'https://www.example.com/streaming-url',
     )
       ..initialize().then((_) {
         setState(() {});
@@ -96,16 +95,25 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  void _resetGraph() {
+    setState(() {
+      temp1Spots.clear();
+      temp2Spots.clear();
+      temp3Spots.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Colors.lightBlue, // 앱바 색상을 밝은 색으로 변경
+        backgroundColor: Colors.lightBlue,
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: () {
+              _resetGraph();
               setState(() {
                 _databaseReference = FirebaseDatabase.instance.ref();
               });
@@ -147,7 +155,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       body: Container(
-        color: Colors.grey[200], // 밝은 배경 색상으로 변경
+        color: Colors.grey[200],
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -164,20 +172,45 @@ class _MyHomePageState extends State<MyHomePage> {
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
-              _buildSlider('Motor RPM', motorRpm, (value) {
-                setState(() {
-                  motorRpm = value;
-                  _databaseReference.child('motorRpm').set(motorRpm);
-                });
-              }),
-              _buildSlider('Target Temperature', targetTemperature, (value) {
-                setState(() {
-                  targetTemperature = value;
-                  _databaseReference.child('targetTemperature').set(targetTemperature);
-                });
-              }),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(
+                    children: [
+                      Text('Motor RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                      _buildSlider('Motor RPM', motorRpm, (value) {
+                        setState(() {
+                          motorRpm = value;
+                        });
+                      }),
+                      ElevatedButton(
+                        onPressed: () {
+                          _databaseReference.child('motorRpm').set(motorRpm);
+                        },
+                        child: Text('Set Motor RPM'),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      Text('Target Temperature: ${targetTemperature.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                      _buildSlider('Target Temperature', targetTemperature, (value) {
+                        setState(() {
+                          targetTemperature = value;
+                        });
+                      }),
+                      ElevatedButton(
+                        onPressed: () {
+                          _databaseReference.child('targetTemperature').set(targetTemperature);
+                        },
+                        child: Text('Set Target Temperature'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
               Container(
-                color: Colors.lightBlue[50], // 하얀 부분을 밝은 색상으로 변경
+                color: Colors.lightBlue[50],
                 height: 100,
               ),
             ],
@@ -190,7 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget _buildDataItem(String key) {
     return Text(
       '$key: ${_data[key]?.toString() ?? 'Loading...'}',
-      style: TextStyle(fontSize: 20, color: Colors.black), // 밝은 배경에 맞는 텍스트 색상 변경
+      style: TextStyle(fontSize: 20, color: Colors.black),
     );
   }
 
@@ -210,38 +243,47 @@ class _MyHomePageState extends State<MyHomePage> {
     return SafeArea(
       child: Column(
         children: <Widget>[
-          TextButton(
-            child: Text(
-              showAvg ? '평균값 O' : '평균값 X',
-              style: TextStyle(
-                color: showAvg ? Colors.black.withOpacity(0.5) : Colors.black, // 밝은 배경에 맞는 텍스트 색상 변경
-              ),
-            ),
-            onPressed: () {
-              setState(() {
-                showAvg = !showAvg;
-              });
-            },
-          ),
           AspectRatio(
-            aspectRatio: 3 / 2,
+            aspectRatio: 1.5,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.all(
                   Radius.circular(10),
                 ),
-                color: Colors.white, // 그래프 배경을 밝은 색상으로 변경
+                color: Colors.white,
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 child: LineChart(
-                  showAvg ? avgChart() : mainChart(),
+                  mainChart(),
                 ),
               ),
             ),
           ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildLegend('Temp 1', Colors.blue),
+              _buildLegend('Temp 2', Colors.red),
+              _buildLegend('Temp 3', Colors.purple),
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegend(String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          color: color,
+        ),
+        SizedBox(width: 5),
+        Text(label, style: TextStyle(color: Colors.black)),
+      ],
     );
   }
 
@@ -254,8 +296,8 @@ class _MyHomePageState extends State<MyHomePage> {
       gridData: FlGridData(
         show: true,
         drawVerticalLine: true,
-        horizontalInterval: 1,
-        verticalInterval: 1,
+        horizontalInterval: 10,
+        verticalInterval: 10,
         getDrawingHorizontalLine: (value) {
           return FlLine(
             color: Colors.grey,
@@ -276,13 +318,17 @@ class _MyHomePageState extends State<MyHomePage> {
             showTitles: true,
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
-              final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
-              final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 8.0,
-                child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-              );
+              if (value % 5 == 0) {
+                final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
+                final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  space: 8.0,
+                  child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10)),
+                );
+              } else {
+                return Container();
+              }
             },
           ),
         ),
@@ -295,7 +341,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 space: 12.0,
                 child: Text(
                   value.toString(),
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               );
             },
@@ -320,16 +366,11 @@ class _MyHomePageState extends State<MyHomePage> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          barWidth: 5,
+          barWidth: 3,
           isStrokeCapRound: true,
-          dotData: FlDotData(show: true),
+          dotData: FlDotData(show: false),
           belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              colors: gradientColors1.map((color) => color.withOpacity(0.3)).toList(),
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+            show: false,
           ),
         ),
         LineChartBarData(
@@ -340,16 +381,11 @@ class _MyHomePageState extends State<MyHomePage> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          barWidth: 5,
+          barWidth: 3,
           isStrokeCapRound: true,
-          dotData: FlDotData(show: true),
+          dotData: FlDotData(show: false),
           belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              colors: gradientColors2.map((color) => color.withOpacity(0.3)).toList(),
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+            show: false,
           ),
         ),
         LineChartBarData(
@@ -360,111 +396,11 @@ class _MyHomePageState extends State<MyHomePage> {
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
-          barWidth: 5,
-          isStrokeCapRound: true,
-          dotData: FlDotData(show: true),
-          belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              colors: gradientColors3.map((color) => color.withOpacity(0.3)).toList(),
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  LineChartData avgChart() {
-    List<Color> gradientColors = [const Color(0xff23b6e6), const Color(0xff02d39a)];
-    return LineChartData(
-      lineTouchData: LineTouchData(enabled: false),
-      gridData: FlGridData(
-        show: true,
-        drawHorizontalLine: true,
-        horizontalInterval: 1,
-        verticalInterval: 1,
-        getDrawingVerticalLine: (value) {
-          return FlLine(
-            color: Colors.grey,
-            strokeWidth: 1,
-          );
-        },
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: Colors.grey,
-            strokeWidth: 1,
-          );
-        },
-      ),
-      titlesData: FlTitlesData(
-        show: true,
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 22,
-            getTitlesWidget: (value, meta) {
-              final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
-              final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 8.0,
-                child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
-              );
-            },
-          ),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            getTitlesWidget: (value, meta) {
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 12.0,
-                child: Text(
-                  value.toString(),
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-              );
-            },
-            reservedSize: 28,
-          ),
-        ),
-      ),
-      borderData: FlBorderData(
-        show: true,
-        border: Border.all(color: Colors.grey, width: 1),
-      ),
-      minX: 0,
-      maxX: 59,
-      minY: 0,
-      maxY: 100,
-      lineBarsData: [
-        LineChartBarData(
-          spots: List.generate(60, (index) => FlSpot(index.toDouble(), 50)), // 예제 평균 데이터
-          isCurved: true,
-          gradient: LinearGradient(
-            colors: [
-              ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!,
-              ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!,
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          barWidth: 5,
+          barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(show: false),
           belowBarData: BarAreaData(
-            show: true,
-            gradient: LinearGradient(
-              colors: [
-                ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!.withOpacity(0.1),
-                ColorTween(begin: gradientColors[0], end: gradientColors[1]).lerp(0.2)!.withOpacity(0.1),
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+            show: false,
           ),
         ),
       ],
