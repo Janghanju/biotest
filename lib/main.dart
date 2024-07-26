@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'firebase_options.dart';
 import 'package:video_player/video_player.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
           _data = value.cast<String, dynamic>();
           _updateTempData();
           _updateControlValues();
+          _checkTemperatureAndSendMessage(); // Check temperature and send message
         } else {
           _data = {};
         }
@@ -72,6 +76,15 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() {});
         _controller.play();
       });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('Message received: ${message.notification?.title}');
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('Message opened: ${message.notification?.title}');
+      // You can navigate to a specific screen or update the UI here
+    });
   }
 
   @override
@@ -102,6 +115,40 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     if (_data.containsKey('targetTemperature')) {
       targetTemperature = double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
+    }
+  }
+
+  void _checkTemperatureAndSendMessage() {
+    if (targetTemperature >= 65.0) { // Example condition
+      sendNotification(
+        'Temperature Alert',
+        'The temperature has reached or exceeded $targetTemperature°C.',
+      );
+    }
+  }
+
+  Future<void> sendNotification(String title, String body) async {
+    const String serverKey = 'YOUR_SERVER_KEY'; // Replace with your FCM server key
+    final response = await http.post(
+      Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'key=$serverKey',
+      },
+      body: json.encode({
+        'notification': {
+          'title': title,
+          'body': body,
+        },
+        'priority': 'high',
+        'to': '/topics/temperature', // You can use a specific token instead
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Notification sent successfully');
+    } else {
+      print('Failed to send notification');
     }
   }
 
@@ -433,3 +480,4 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
