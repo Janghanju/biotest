@@ -58,6 +58,7 @@ class _MyHomePageState extends State<MyHomePage> {
         if (value != null) {
           _data = value.cast<String, dynamic>();
           _updateTempData();
+          _updateControlValues();
         } else {
           _data = {};
         }
@@ -92,6 +93,15 @@ class _MyHomePageState extends State<MyHomePage> {
         spots.removeAt(0);
       }
       spots.add(FlSpot(spots.length.toDouble(), value));
+    }
+  }
+
+  void _updateControlValues() {
+    if (_data.containsKey('motorRpm')) {
+      motorRpm = double.tryParse(_data['motorRpm'].toString()) ?? 0.0;
+    }
+    if (_data.containsKey('targetTemperature')) {
+      targetTemperature = double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
     }
   }
 
@@ -178,7 +188,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   Column(
                     children: [
                       Text('Motor RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      _buildSlider('Motor RPM', motorRpm, (value) {
+                      _buildSlider('Motor RPM', motorRpm, 0, 3000, (value) {
                         setState(() {
                           motorRpm = value;
                         });
@@ -193,8 +203,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   Column(
                     children: [
-                      Text('Target Temperature: ${targetTemperature.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      _buildSlider('Target Temperature', targetTemperature, (value) {
+                      Text('Target Temperature: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                      _buildSlider('Target Temperature', targetTemperature, 0, 65.99, (value) {
                         setState(() {
                           targetTemperature = value;
                         });
@@ -407,16 +417,16 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildSlider(String label, double value, ValueChanged<double> onChanged) {
+  Widget _buildSlider(String label, double value, double min, double max, ValueChanged<double> onChanged) {
     return Column(
       children: [
         Text(label, style: TextStyle(fontSize: 16, color: Colors.black)),
         Slider(
           value: value,
-          min: 0,
-          max: 100,
-          divisions: 100,
-          label: value.round().toString(),
+          min: min,
+          max: max,
+          divisions: ((max - min) * 100).toInt(),
+          label: value.toStringAsFixed(label == 'Target Temperature' ? 2 : 0),
           onChanged: onChanged,
         ),
       ],
