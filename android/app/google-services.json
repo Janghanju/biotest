@@ -1,0 +1,119 @@
+{
+  "project_info": {
+    "project_number": "209596339220",
+    "firebase_url": "https://bioreactor-bb6b7-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "bioreactor-bb6b7",
+    "storage_bucket": "bioreactor-bb6b7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209596339220:android:19b4f0de873885f3e34301",
+        "android_client_info": {
+          "package_name": "com.example.biotest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209596339220:android:7a147d107140ae16e34301",
+        "android_client_info": {
+          "package_name": "com.example.biotest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209596339220:android:cf34f8c4cf5d5375e34301",
+        "android_client_info": {
+          "package_name": "com.example.biotest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
