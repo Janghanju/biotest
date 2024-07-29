@@ -4,9 +4,10 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'firebase_options.dart';
-import 'package:camera/camera.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,17 +15,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Obtain a list of available cameras
-  final cameras = await availableCameras();
-  final firstCamera = cameras.first;
-
-  runApp(MyApp(camera: firstCamera));
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final CameraDescription camera;
-
-  const MyApp({Key? key, required this.camera}) : super(key: key);
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -34,16 +29,15 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Bio-reactor Home Page', camera: camera),
+      home: MyHomePage(title: 'Bio-reactor Home Page'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
   final String title;
-  final CameraDescription camera;
 
-  const MyHomePage({Key? key, required this.title, required this.camera}) : super(key: key);
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -58,7 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
 
-  late CameraController _cameraController;
+  late VideoPlayerController _videoPlayerController;
+  ChewieController? _chewieController;
 
   @override
   void initState() {
@@ -78,17 +73,19 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
 
-    _cameraController = CameraController(
-      widget.camera,
-      ResolutionPreset.high,
-    );
-
-    _cameraController.initialize().then((_) {
-      setState(() {});
-      _cameraController.startImageStream((image) {
-        // Optionally handle image stream data here
+    // Initialize video player with the RTSP stream URL
+    String cameraStreamUrl = 'rtsp://your_camera_stream_url';
+    _videoPlayerController = VideoPlayerController.network(cameraStreamUrl)
+      ..initialize().then((_) {
+        setState(() {
+          _chewieController = ChewieController(
+            videoPlayerController: _videoPlayerController,
+            aspectRatio: _videoPlayerController.value.aspectRatio,
+            autoPlay: true,
+            looping: true,
+          );
+        });
       });
-    });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       print('Message received: ${message.notification?.title}');
@@ -102,7 +99,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _cameraController.dispose();
+    _videoPlayerController.dispose();
+    _chewieController?.dispose();
     super.dispose();
   }
 
@@ -298,10 +296,10 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildStreamingView() {
-    return _cameraController.value.isInitialized
+    return _chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
         ? AspectRatio(
-      aspectRatio: _cameraController.value.aspectRatio,
-      child: CameraPreview(_cameraController),
+      aspectRatio: _chewieController!.aspectRatio!,
+      child: Chewie(controller: _chewieController!),
     )
         : Container(
       height: 200,
@@ -493,4 +491,3 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-
