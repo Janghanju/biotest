@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'firebase_options.dart';
+import 'firebase_options.dart'; // Ensure you have your Firebase configuration file
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:video_player/video_player.dart';
@@ -11,11 +11,22 @@ import 'package:chewie/chewie.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
+  await _initializeFirebase();
   runApp(MyApp());
+}
+
+Future<void> _initializeFirebase() async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    if (e.toString().contains('FirebaseApp with name [DEFAULT] already exists')) {
+      print('Firebase already initialized');
+    } else {
+      rethrow;
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -51,9 +62,11 @@ class _MyHomePageState extends State<MyHomePage> {
   List<FlSpot> temp3Spots = [];
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
+  bool uvIsOn = false;
 
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
+  String? _fcmToken; // FCM 토큰을 저장할 변수
 
   @override
   void initState() {
@@ -85,6 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
             looping: true,
           );
         });
+      }).catchError((error) {
+        print('Video Player Initialization Error: $error');
       });
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -95,6 +110,21 @@ class _MyHomePageState extends State<MyHomePage> {
       print('Message opened: ${message.notification?.title}');
       // You can navigate to a specific screen or update the UI here
     });
+
+    // Get the FCM token
+    _getFcmToken();
+  }
+
+  Future<void> _getFcmToken() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      setState(() {
+        _fcmToken = fcmToken;
+      });
+      print('FCM Token: $_fcmToken');
+    } catch (e) {
+      print('Failed to get FCM token: $e');
+    }
   }
 
   @override
@@ -105,9 +135,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _updateTempData() {
-    _updateTemp('temp1', temp1Spots);
-    _updateTemp('temp2', temp2Spots);
-    _updateTemp('temp3', temp3Spots);
+    _updateTemp('temp/temp1', temp1Spots);
+    _updateTemp('temp/temp2', temp2Spots);
+    _updateTemp('temp/temp3', temp3Spots);
   }
 
   void _updateTemp(String key, List<FlSpot> spots) {
@@ -126,6 +156,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     if (_data.containsKey('targetTemperature')) {
       targetTemperature = double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
+    }
+    if (_data.containsKey('uvIsOn')) {
+      uvIsOn = _data['uvIsOn'] == true;
     }
   }
 
@@ -152,7 +185,7 @@ class _MyHomePageState extends State<MyHomePage> {
           'body': body,
         },
         'priority': 'high',
-        'to': '/topics/temperature', // You can use a specific token instead
+        'to': '/topics/temperature',
       }),
     );
 
@@ -168,6 +201,13 @@ class _MyHomePageState extends State<MyHomePage> {
       temp1Spots.clear();
       temp2Spots.clear();
       temp3Spots.clear();
+    });
+  }
+
+  void _toggleUV() {
+    setState(() {
+      uvIsOn = !uvIsOn;
+      _databaseReference.child('uvIsOn').set(uvIsOn);
     });
   }
 
@@ -240,6 +280,11 @@ class _MyHomePageState extends State<MyHomePage> {
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
+              Text(
+                'FCM Token: ${_fcmToken ?? 'Loading...'}',
+                style: TextStyle(fontSize: 16, color: Colors.black),
+              ),
+              SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -275,6 +320,15 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ],
                   ),
+                  Column(
+                    children: [
+                      Text('UV Status: ${uvIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                      ElevatedButton(
+                        onPressed: _toggleUV,
+                        child: Text(uvIsOn ? 'Turn UV Off' : 'Turn UV On'),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               Container(
@@ -288,203 +342,72 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildDataItem(String key) {
-    return Text(
-      '$key: ${_data[key]?.toString() ?? 'Loading...'}',
-      style: TextStyle(fontSize: 20, color: Colors.black),
-    );
+  Widget _buildStreamingView() {
+    if (_chewieController == null) {
+      return Center(child: CircularProgressIndicator());
+    } else {
+      return Container(
+        height: 200,
+        child: Chewie(controller: _chewieController!),
+      );
+    }
   }
 
-  Widget _buildStreamingView() {
-    return _chewieController != null && _chewieController!.videoPlayerController.value.isInitialized
-        ? AspectRatio(
-      aspectRatio: _chewieController!.aspectRatio!,
-      child: Chewie(controller: _chewieController!),
-    )
-        : Container(
-      height: 200,
-      child: Center(child: CircularProgressIndicator()),
+  Widget _buildDataItem(String key) {
+    return Column(
+      children: [
+        Text(
+          '${key.toUpperCase()}: ${_data[key] ?? 'N/A'}',
+          style: TextStyle(fontSize: 16, color: Colors.black),
+        ),
+      ],
     );
   }
 
   Widget _buildGraph() {
-    return SafeArea(
-      child: Column(
-        children: <Widget>[
-          AspectRatio(
-            aspectRatio: 1.5,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(
-                  Radius.circular(10),
-                ),
-                color: Colors.white,
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                child: LineChart(
-                  mainChart(),
-                ),
-              ),
+    return Container(
+      height: 300,
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(show: false),
+          titlesData: FlTitlesData(show: true),
+          borderData: FlBorderData(show: true),
+          lineBarsData: [
+            LineChartBarData(
+              spots: temp1Spots,
+              isCurved: true,
+              color: Colors.red,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildLegend('Temp 1', Colors.blue),
-              _buildLegend('Temp 2', Colors.red),
-              _buildLegend('Temp 3', Colors.purple),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegend(String label, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          color: color,
-        ),
-        SizedBox(width: 5),
-        Text(label, style: TextStyle(color: Colors.black)),
-      ],
-    );
-  }
-
-  LineChartData mainChart() {
-    List<Color> gradientColors1 = [const Color(0xff23b6e6), const Color(0xff02d39a)];
-    List<Color> gradientColors2 = [const Color(0xffff0000), const Color(0xff800000)];
-    List<Color> gradientColors3 = [const Color(0xff8b00ff), const Color(0xff4b0082)];
-
-    return LineChartData(
-      gridData: FlGridData(
-        show: true,
-        drawVerticalLine: true,
-        horizontalInterval: 10,
-        verticalInterval: 10,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: Colors.grey,
-            strokeWidth: 1,
-          );
-        },
-        getDrawingVerticalLine: (value) {
-          return FlLine(
-            color: Colors.grey,
-            strokeWidth: 1,
-          );
-        },
-      ),
-      titlesData: FlTitlesData(
-        show: true,
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 22,
-            getTitlesWidget: (value, meta) {
-              if (value % 5 == 0) {
-                final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
-                final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
-                return SideTitleWidget(
-                  axisSide: meta.axisSide,
-                  space: 8.0,
-                  child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10)),
-                );
-              } else {
-                return Container();
-              }
-            },
-          ),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(
-            showTitles: true,
-            getTitlesWidget: (value, meta) {
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                space: 12.0,
-                child: Text(
-                  value.toString(),
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              );
-            },
-            reservedSize: 28,
-          ),
+            LineChartBarData(
+              spots: temp2Spots,
+              isCurved: true,
+              color: Colors.green,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ),
+            LineChartBarData(
+              spots: temp3Spots,
+              isCurved: true,
+              color: Colors.blue,
+              dotData: FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ),
+          ],
         ),
       ),
-      borderData: FlBorderData(
-        show: true,
-        border: Border.all(color: Colors.grey, width: 1),
-      ),
-      minX: 0,
-      maxX: 59,
-      minY: 0,
-      maxY: 100,
-      lineBarsData: [
-        LineChartBarData(
-          spots: temp1Spots,
-          isCurved: true,
-          gradient: LinearGradient(
-            colors: gradientColors1,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          barWidth: 3,
-          isStrokeCapRound: true,
-          dotData: FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: false,
-          ),
-        ),
-        LineChartBarData(
-          spots: temp2Spots,
-          isCurved: true,
-          gradient: LinearGradient(
-            colors: gradientColors2,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          barWidth: 3,
-          isStrokeCapRound: true,
-          dotData: FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: false,
-          ),
-        ),
-        LineChartBarData(
-          spots: temp3Spots,
-          isCurved: true,
-          gradient: LinearGradient(
-            colors: gradientColors3,
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
-          barWidth: 3,
-          isStrokeCapRound: true,
-          dotData: FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: false,
-          ),
-        ),
-      ],
     );
   }
 
   Widget _buildSlider(String label, double value, double min, double max, ValueChanged<double> onChanged) {
     return Column(
       children: [
-        Text(label, style: TextStyle(fontSize: 16, color: Colors.black)),
+        Text(label),
         Slider(
           value: value,
           min: min,
           max: max,
-          divisions: ((max - min) * 100).toInt(),
-          label: value.toStringAsFixed(label == 'Target Temperature' ? 2 : 0),
           onChanged: onChanged,
         ),
       ],
