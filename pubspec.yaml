@@ -33,7 +33,7 @@ dependencies:
   firebase_core: ^2.7.0 # firebase_core 패키지의 최신 버전 사용
   firebase_database: ^10.5.7
   fl_chart: ^0.68.0
-  video_player: ^2.3.5 # video_player 패키지 추가
+  video_player: ^2.3.0 # video_player 패키지 추가
 
 
   # The following adds the Cupertino Icons font to your application.
