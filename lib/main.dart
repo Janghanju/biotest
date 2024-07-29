@@ -47,6 +47,8 @@ class _MyHomePageState extends State<MyHomePage> {
   late VideoPlayerController _controller;
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
+  double rtMotor = 0.0;
+  double rtTemp = 0.0;
 
   @override
   void initState() {
@@ -66,12 +68,11 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     _controller = VideoPlayerController.network(
-      'https://www.example.com/streaming-url',
-    )
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+      'http://210.99.70.120:1935/live/cctv018.stream/playlist.m3u8',
+    )..initialize().then((_) {
+      setState(() {});
+      _controller.play();
+    });
   }
 
   @override
@@ -101,7 +102,14 @@ class _MyHomePageState extends State<MyHomePage> {
       motorRpm = double.tryParse(_data['motorRpm'].toString()) ?? 0.0;
     }
     if (_data.containsKey('targetTemperature')) {
-      targetTemperature = double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
+      targetTemperature =
+          double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
+    }
+    if (_data.containsKey('rtMotor')) {
+      rtMotor = double.tryParse(_data['rtMotor'].toString()) ?? 0.0;
+    }
+    if (_data.containsKey('rtTemp')) {
+      rtTemp = double.tryParse(_data['rtTemp'].toString()) ?? 0.0;
     }
   }
 
@@ -187,8 +195,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 children: [
                   Column(
                     children: [
-                      Text('Motor RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      _buildSlider('Motor RPM', motorRpm, 0, 3000, (value) {
+                      Text('RT RPM: ${rtMotor.toStringAsFixed(1)}',
+                          style: TextStyle(fontSize: 16, color: Colors.black)),
+                      _buildSlider('Set RPM', motorRpm, 0, 3000, (value) {
                         setState(() {
                           motorRpm = value;
                         });
@@ -197,23 +206,29 @@ class _MyHomePageState extends State<MyHomePage> {
                         onPressed: () {
                           _databaseReference.child('motorRpm').set(motorRpm);
                         },
-                        child: Text('Set Motor RPM'),
+                        child: Text('Set RPM'),
                       ),
                     ],
                   ),
                   Column(
                     children: [
-                      Text('Target Temperature: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      _buildSlider('Target Temperature', targetTemperature, 0, 65.99, (value) {
-                        setState(() {
-                          targetTemperature = value;
-                        });
-                      }),
+                      Text(
+                          'RT Temp: ${rtTemp.toStringAsFixed(2)}',
+                          style: TextStyle(fontSize: 16, color: Colors.black)),
+                      _buildSlider(
+                          'Set Temp', targetTemperature, -55.00, 125.00,
+                              (value) {
+                            setState(() {
+                              targetTemperature = value;
+                            });
+                          }),
                       ElevatedButton(
                         onPressed: () {
-                          _databaseReference.child('targetTemperature').set(targetTemperature);
+                          _databaseReference
+                              .child('Set Temp')
+                              .set(targetTemperature);
                         },
-                        child: Text('Set Target Temperature'),
+                        child: Text('Set Temp'),
                       ),
                     ],
                   ),
@@ -298,9 +313,18 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   LineChartData mainChart() {
-    List<Color> gradientColors1 = [const Color(0xff23b6e6), const Color(0xff02d39a)];
-    List<Color> gradientColors2 = [const Color(0xffff0000), const Color(0xff800000)];
-    List<Color> gradientColors3 = [const Color(0xff8b00ff), const Color(0xff4b0082)];
+    List<Color> gradientColors1 = [
+      const Color(0xff23b6e6),
+      const Color(0xff02d39a)
+    ];
+    List<Color> gradientColors2 = [
+      const Color(0xffff0000),
+      const Color(0xff800000)
+    ];
+    List<Color> gradientColors3 = [
+      const Color(0xff8b00ff),
+      const Color(0xff4b0082)
+    ];
 
     return LineChartData(
       gridData: FlGridData(
@@ -329,12 +353,18 @@ class _MyHomePageState extends State<MyHomePage> {
             reservedSize: 22,
             getTitlesWidget: (value, meta) {
               if (value % 5 == 0) {
-                final DateTime time = DateTime.now().subtract(Duration(seconds: (60 - value.toInt())));
-                final String formattedTime = "${time.hour}:${time.minute}:${time.second}";
+                final DateTime time = DateTime.now()
+                    .subtract(Duration(seconds: (60 - value.toInt())));
+                final String formattedTime =
+                    "${time.hour}:${time.minute}:${time.second}";
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   space: 8.0,
-                  child: Text(formattedTime, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 10)),
+                  child: Text(formattedTime,
+                      style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10)),
                 );
               } else {
                 return Container();
@@ -351,7 +381,10 @@ class _MyHomePageState extends State<MyHomePage> {
                 space: 12.0,
                 child: Text(
                   value.toString(),
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12),
                 ),
               );
             },
@@ -363,10 +396,6 @@ class _MyHomePageState extends State<MyHomePage> {
         show: true,
         border: Border.all(color: Colors.grey, width: 1),
       ),
-      minX: 0,
-      maxX: 59,
-      minY: 0,
-      maxY: 100,
       lineBarsData: [
         LineChartBarData(
           spots: temp1Spots,
@@ -417,7 +446,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildSlider(String label, double value, double min, double max, ValueChanged<double> onChanged) {
+  Widget _buildSlider(String label, double value, double min, double max,
+      ValueChanged<double> onChanged) {
     return Column(
       children: [
         Text(label, style: TextStyle(fontSize: 16, color: Colors.black)),

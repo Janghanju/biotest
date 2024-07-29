@@ -42,13 +42,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBb6esUnta6kPxjr6-9vuLVdebjFGszcf0',
-    appId: '1:499972106141:web:3def8b24d9bf8fbd773174',
+    appId: '1:499972106141:web:3e23a9d3d2569f80773174',
     messagingSenderId: '499972106141',
     projectId: 'flutter-test-df9b9',
     authDomain: 'flutter-test-df9b9.firebaseapp.com',
     databaseURL: 'https://flutter-test-df9b9-default-rtdb.asia-southeast1.firebasedatabase.app',
     storageBucket: 'flutter-test-df9b9.appspot.com',
-    measurementId: 'G-CEP4PLG5V5',
+    measurementId: 'G-X3SDLNR7Z8',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
