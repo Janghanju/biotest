@@ -68,14 +68,15 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     _controller = VideoPlayerController.network(
-      'http://210.99.70.120:1935/live/cctv018.stream/playlist.m3u8',
+      //'http://210.99.70.120:1935/live/cctv018.stream/playlist.m3u8',
+      'https://www.shutterstock.com/shutterstock/videos/1111470671/preview/stock-footage-electric-light-bulb-bright-polygonal-connections-on-a-dark-blue-background-technology-concept.webm',
     )..initialize().then((_) {
       setState(() {});
       _controller.play();
     });
   }
 
-  @override
+  @overrides
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -216,7 +217,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           'RT Temp: ${rtTemp.toStringAsFixed(2)}',
                           style: TextStyle(fontSize: 16, color: Colors.black)),
                       _buildSlider(
-                          'Target Temperature', targetTemperature, -55.00, 125.00,
+                          'RT Temp', targetTemperature, -55.00, 125.00,
                               (value) {
                             setState(() {
                               targetTemperature = value;
