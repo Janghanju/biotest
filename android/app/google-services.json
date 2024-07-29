@@ -1,65 +1,116 @@
 {
   "project_info": {
-    "project_number": "499972106141",
-    "firebase_url": "https://flutter-test-df9b9-default-rtdb.asia-southeast1.firebasedatabase.app",
-    "project_id": "flutter-test-df9b9",
-    "storage_bucket": "flutter-test-df9b9.appspot.com"
+    "project_number": "209596339220",
+    "firebase_url": "https://bioreactor-bb6b7-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "bioreactor-bb6b7",
+    "storage_bucket": "bioreactor-bb6b7.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:499972106141:android:28af7b59fad872a2773174",
-        "android_client_info": {
-          "package_name": "com.example.app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAn6a3XtpQY1fnk5mwR5wM4V4PfrpwMb8g"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:499972106141:android:8aa003ca8820b4de773174",
+        "mobilesdk_app_id": "1:209596339220:android:19b4f0de873885f3e34301",
         "android_client_info": {
           "package_name": "com.example.biotest"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAn6a3XtpQY1fnk5mwR5wM4V4PfrpwMb8g"
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
         }
       }
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:499972106141:android:fb25474e583e085b773174",
+        "mobilesdk_app_id": "1:209596339220:android:7a147d107140ae16e34301",
         "android_client_info": {
-          "package_name": "com.example.myapp"
+          "package_name": "com.example.biotest"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyAn6a3XtpQY1fnk5mwR5wM4V4PfrpwMb8g"
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209596339220:android:cf34f8c4cf5d5375e34301",
+        "android_client_info": {
+          "package_name": "com.example.biotest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-oSz3NV77CNDToN0Ryw-qG_qulCDdNC4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209596339220-vq77p2387nuek9a936cv99sdtf6l6ju1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "209596339220-8bq99p1dl02lfjm7i55pcl5mo2srun1c.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.biotest"
+              }
+            }
+          ]
         }
       }
     }
