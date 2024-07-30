@@ -12,8 +12,13 @@ import '../widgets/control_slider.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
+  final String cameraStreamUrl;
 
-  const HomeScreen({Key? key, required this.title}) : super(key: key);
+  const HomeScreen({
+    Key? key,
+    required this.title,
+    required this.cameraStreamUrl,
+  }) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -22,9 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  List<FlSpot> temp1Spots = [];
-  List<FlSpot> temp2Spots = [];
-  List<FlSpot> temp3Spots = [];
+  List<FlSpot> tempSpots = List.generate(12, (_) => []);
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
   bool uvIsOn = false;
@@ -32,6 +35,10 @@ class _HomeScreenState extends State<HomeScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   String? _fcmToken;
+
+  String selectedTemp = 'temp1';
+
+  get tempKeys => null;  // 기본값
 
   @override
   void initState() {
@@ -52,8 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Initialize video player with the RTSP stream URL
-    String cameraStreamUrl = 'rtsp://your_camera_stream_url';
-    _videoPlayerController = VideoPlayerController.network(cameraStreamUrl)
+    _videoPlayerController = VideoPlayerController.network(widget.cameraStreamUrl)
       ..initialize().then((_) {
         setState(() {
           _chewieController = ChewieController(
@@ -91,9 +97,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updateTempData() {
-    _updateTemp('temp/temp1', temp1Spots);
-    _updateTemp('temp/temp2', temp2Spots);
-    _updateTemp('temp/temp3', temp3Spots);
+    if (tempKeys.contains(selectedTemp)) {
+      _updateTemp(selectedTemp, _getSpotsForKey(selectedTemp) as List<FlSpot>);
+    }
   }
 
   void _updateTemp(String key, List<FlSpot> spots) {
@@ -106,16 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  FlSpot _getSpotsForKey(String key) {
+    final index = int.tryParse(key.replaceAll('temp', '')) ?? 1;
+    return tempSpots[index - 1];
+  }
+
   void _updateControlValues() {
-    if (_data.containsKey('motorRpm')) {
-      motorRpm = double.tryParse(_data['motorRpm'].toString()) ?? 0.0;
-    }
-    if (_data.containsKey('targetTemperature')) {
-      targetTemperature = double.tryParse(_data['targetTemperature'].toString()) ?? 0.0;
-    }
-    if (_data.containsKey('uvIsOn')) {
-      uvIsOn = _data['uvIsOn'] == true;
-    }
+    motorRpm = _data.containsKey('motorRpm') ? double.tryParse(_data['motorRpm'].toString()) ?? 0.0 : motorRpm;
+    targetTemperature = _data.containsKey('targetTemperature') ? double.tryParse(_data['targetTemperature'].toString()) ?? 0.0 : targetTemperature;
+    uvIsOn = _data.containsKey('uvIsOn') ? _data['uvIsOn'] == true : uvIsOn;
   }
 
   void _checkTemperatureAndSendMessage() {
@@ -125,14 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'The temperature has reached or exceeded $targetTemperature°C.',
       );
     }
-  }
-
-  void _resetGraph() {
-    setState(() {
-      temp1Spots.clear();
-      temp2Spots.clear();
-      temp3Spots.clear();
-    });
   }
 
   void _toggleUV() {
@@ -200,13 +197,31 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               StreamingView(chewieController: _chewieController),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  DataItem(data: _data, dataKey: 'temp1'),
-                  DataItem(data: _data, dataKey: 'temp2'),
-                  DataItem(data: _data, dataKey: 'temp3'),
-                ],
+              // 드롭다운 버튼 추가
+              DropdownButton<String>(
+                value: selectedTemp,
+                items: tempKeys.map((String key) {
+                  return DropdownMenuItem<String>(
+                    value: key,
+                    child: Text(key),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedTemp = newValue!;
+                    _updateTempData(); // 데이터 업데이트
+                  });
+                },
+              ),
+              // Row를 SingleChildScrollView로 감싸서 스크롤 가능하도록 수정
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    ...tempKeys.map((key) => DataItem(data: _data, dataKey: key)),
+                  ],
+                ),
               ),
               SizedBox(height: 20),
               _buildGraph(),
@@ -219,46 +234,27 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Column(
-                    children: [
-                      Text('Motor RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      ControlSlider(label: 'Motor RPM', value: motorRpm, min: 0, max: 3000, onChanged: (value) {
-                        setState(() {
-                          motorRpm = value;
-                        });
-                      }),
-                      ElevatedButton(
-                        onPressed: () {
-                          _databaseReference.child('motorRpm').set(motorRpm);
-                        },
-                        child: Text('Set Motor RPM'),
-                      ),
-                    ],
+                  _buildControlColumn(
+                    label: 'Motor RPM',
+                    value: motorRpm,
+                    min: 0,
+                    max: 3000,
+                    onValueChanged: (value) => setState(() => motorRpm = value),
+                    onSubmit: () => _databaseReference.child('motorRpm').set(motorRpm),
                   ),
-                  Column(
-                    children: [
-                      Text('Target Temperature: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      ControlSlider(label: 'Target Temperature', value: targetTemperature, min: 0, max: 65.99, onChanged: (value) {
-                        setState(() {
-                          targetTemperature = value;
-                        });
-                      }),
-                      ElevatedButton(
-                        onPressed: () {
-                          _databaseReference.child('targetTemperature').set(targetTemperature);
-                        },
-                        child: Text('Set Target Temperature'),
-                      ),
-                    ],
+                  _buildControlColumn(
+                    label: 'Target Temperature',
+                    value: targetTemperature,
+                    min: 0,
+                    max: 65.99,
+                    onValueChanged: (value) => setState(() => targetTemperature = value),
+                    onSubmit: () => _databaseReference.child('targetTemperature').set(targetTemperature),
                   ),
-                  Column(
-                    children: [
-                      Text('UV Status: ${uvIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                      ElevatedButton(
-                        onPressed: _toggleUV,
-                        child: Text(uvIsOn ? 'Turn UV Off' : 'Turn UV On'),
-                      ),
-                    ],
+                  _buildControlColumn(
+                    label: 'UV Status',
+                    value: uvIsOn ? "On" : "Off",
+                    onSubmit: _toggleUV,
+                    buttonText: uvIsOn ? 'Turn UV Off' : 'Turn UV On',
                   ),
                 ],
               ),
@@ -273,39 +269,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildGraph() {
-    return Container(
-      height: 300,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: true),
-          borderData: FlBorderData(show: true),
-          lineBarsData: [
-            LineChartBarData(
-              spots: temp1Spots,
-              isCurved: true,
-              color: Colors.red,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
-            ),
-            LineChartBarData(
-              spots: temp2Spots,
-              isCurved: true,
-              color: Colors.green,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
-            ),
-            LineChartBarData(
-              spots: temp3Spots,
-              isCurved: true,
-              color: Colors.blue,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+
+
