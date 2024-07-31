@@ -33,7 +33,8 @@ dependencies:
   firebase_core: ^2.7.0 # firebase_core 패키지의 최신 버전 사용
   firebase_database: ^10.5.7
   fl_chart: ^0.68.0
-  video_player: ^2.3.0 # video_player 패키지 추가
+  flutter_exoplayer: ^0.6.1 # video_player 패키지 추가
+  video_player: ^2.6.0
   http: ^1.2.2
   camera: ^0.11.0+1
   chewie: ^1.2.2

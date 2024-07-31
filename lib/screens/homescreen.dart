@@ -4,11 +4,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/firebase_service.dart';
 import '../services/notification.dart';
-import '../widgets/streaming_view.dart';
 import '../widgets/dataitem.dart';
 import '../widgets/control_slider.dart';
 
@@ -24,16 +22,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  List<FlSpot> temp1Spots = [FlSpot(0, 0)];
-  List<FlSpot> temp2Spots = [FlSpot(0, 0)];
-  List<FlSpot> temp3Spots = [FlSpot(0, 0)];
+  List<List<FlSpot>> tempSpots = List.generate(12, (_) => <FlSpot>[]); // 각 온도 데이터 리스트 생성
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
   bool uvIsOn = false;
 
   late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
   String? _fcmToken;
+
+  String selectedTemp = 'temp1';
+  final List<String> tempKeys = [
+    'temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6',
+    'temp7', 'temp8', 'temp9', 'temp10', 'temp11', 'temp12'
+  ];
   final TextEditingController _temperatureController = TextEditingController();
 
   @override
@@ -55,17 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Initialize video player with the RTSP stream URL
-    String cameraStreamUrl = 'rtmp://210.99.70.120/live/cctv018.stream';
-    _videoPlayerController = VideoPlayerController.network(cameraStreamUrl)
+    print("Url Success");
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
       ..initialize().then((_) {
-        setState(() {
-          _chewieController = ChewieController(
-            videoPlayerController: _videoPlayerController,
-            aspectRatio: _videoPlayerController.value.aspectRatio,
-            autoPlay: true,
-            looping: true,
-          );
-        });
+        setState(() {});
+        print("videovideo");
+        _videoPlayerController.play();
+        print("Video1");
       }).catchError((error) {
         print('Video Player Initialization Error: $error');
       });
@@ -89,15 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _videoPlayerController.dispose();
-    _chewieController?.dispose();
     _temperatureController.dispose();
     super.dispose();
   }
 
   void _updateTempData() {
-    _updateTemp('temp1', temp1Spots);
-    _updateTemp('temp2', temp2Spots);
-    _updateTemp('temp3', temp3Spots);
+    for (int i = 0; i < tempKeys.length; i++) {
+      _updateTemp(tempKeys[i], tempSpots[i]);
+    }
   }
 
   void _updateTemp(String key, List<FlSpot> spots) {
@@ -136,9 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _resetGraph() {
     setState(() {
-      temp1Spots.clear();
-      temp2Spots.clear();
-      temp3Spots.clear();
+      for (int i = 0; i < tempSpots.length; i++) {
+        tempSpots[i].clear();
+      }
     });
   }
 
@@ -221,7 +217,12 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              StreamingView(chewieController: _chewieController),
+              AspectRatio(
+                aspectRatio: _videoPlayerController.value.aspectRatio,
+                child: _videoPlayerController.value.isInitialized
+                    ? VideoPlayer(_videoPlayerController)
+                    : Center(child: CircularProgressIndicator()),
+              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -230,6 +231,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(child: DataItem(data: _data, dataKey: 'temp3')),
                 ],
               ),
+              SizedBox(height: 20),
+              _buildDropdown(),
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
@@ -319,7 +322,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildDropdown() {
+    return DropdownButton<String>(
+      value: selectedTemp,
+      onChanged: (String? newValue) {
+        setState(() {
+          selectedTemp = newValue!;
+        });
+      },
+      items: tempKeys.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildGraph() {
+    int selectedIndex = tempKeys.indexOf(selectedTemp);
+    List<FlSpot> selectedSpots = tempSpots[selectedIndex];
+
     return Container(
       height: 300,
       child: LineChart(
@@ -329,23 +352,9 @@ class _HomeScreenState extends State<HomeScreen> {
           borderData: FlBorderData(show: true),
           lineBarsData: [
             LineChartBarData(
-              spots: temp1Spots.isEmpty ? [FlSpot(0, 0)] : temp1Spots,
+              spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
               isCurved: true,
               color: Colors.red,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
-            ),
-            LineChartBarData(
-              spots: temp2Spots.isEmpty ? [FlSpot(0, 0)] : temp2Spots,
-              isCurved: true,
-              color: Colors.green,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
-            ),
-            LineChartBarData(
-              spots: temp3Spots.isEmpty ? [FlSpot(0, 0)] : temp3Spots,
-              isCurved: true,
-              color: Colors.blue,
               dotData: FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
             ),
