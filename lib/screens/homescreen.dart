@@ -27,7 +27,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  List<FlSpot> tempSpots = List.generate(12, (_) => []);
+  List<List<FlSpot>> tempSpots = List.generate(12, (_) => <FlSpot>[]); // 각 온도 데이터 리스트 생성
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
   bool uvIsOn = false;
@@ -37,8 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _fcmToken;
 
   String selectedTemp = 'temp1';
-
-  get tempKeys => null;  // 기본값
+  final List<String> tempKeys = [
+    'temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6',
+    'temp7', 'temp8', 'temp9', 'temp10', 'temp11', 'temp12'
+  ];
 
   @override
   void initState() {
@@ -97,8 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _updateTempData() {
-    if (tempKeys.contains(selectedTemp)) {
-      _updateTemp(selectedTemp, _getSpotsForKey(selectedTemp) as List<FlSpot>);
+    for (String key in tempKeys) {
+      _updateTemp(key, _getSpotsForKey(key));
     }
   }
 
@@ -112,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  FlSpot _getSpotsForKey(String key) {
+  List<FlSpot> _getSpotsForKey(String key) {
     final index = int.tryParse(key.replaceAll('temp', '')) ?? 1;
     return tempSpots[index - 1];
   }
@@ -137,6 +139,84 @@ class _HomeScreenState extends State<HomeScreen> {
       uvIsOn = !uvIsOn;
       _databaseReference.child('uvIsOn').set(uvIsOn);
     });
+  }
+
+  void _resetGraph() {
+    setState(() {
+      for (var spots in tempSpots) {
+        spots.clear();
+      }
+    });
+  }
+
+  Widget _buildGraph() {
+    return LineChart(
+      LineChartData(
+        lineBarsData: [
+          LineChartBarData(
+            spots: _getSpotsForKey(selectedTemp),
+            isCurved: true,
+            color: Colors.blue,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: FlDotData(show: false),
+            belowBarData: BarAreaData(show: false),
+          ),
+        ],
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: true),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(showTitles: true),
+          ),
+        ),
+        borderData: FlBorderData(show: true),
+      ),
+    );
+  }
+
+  Widget _buildControlColumn({
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required ValueChanged<double> onValueChanged,
+    required VoidCallback onSubmit,
+  }) {
+    return Column(
+      children: [
+        Text('$label: ${value.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+        ControlSlider(
+          label: label,
+          value: value,
+          min: min,
+          max: max,
+          onChanged: onValueChanged,
+        ),
+        ElevatedButton(
+          onPressed: onSubmit,
+          child: Text('Set $label'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControlColumnForUV({
+    required String label,
+    required String value,
+    required VoidCallback onSubmit,
+    required String buttonText,
+  }) {
+    return Column(
+      children: [
+        Text('$label: $value', style: TextStyle(fontSize: 16, color: Colors.black)),
+        ElevatedButton(
+          onPressed: onSubmit,
+          child: Text(buttonText),
+        ),
+      ],
+    );
   }
 
   @override
@@ -197,7 +277,6 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               StreamingView(chewieController: _chewieController),
-              // 드롭다운 버튼 추가
               DropdownButton<String>(
                 value: selectedTemp,
                 items: tempKeys.map((String key) {
@@ -213,7 +292,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   });
                 },
               ),
-              // Row를 SingleChildScrollView로 감싸서 스크롤 가능하도록 수정
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -250,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onValueChanged: (value) => setState(() => targetTemperature = value),
                     onSubmit: () => _databaseReference.child('targetTemperature').set(targetTemperature),
                   ),
-                  _buildControlColumn(
+                  _buildControlColumnForUV(
                     label: 'UV Status',
                     value: uvIsOn ? "On" : "Off",
                     onSubmit: _toggleUV,
@@ -268,6 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
 
 
