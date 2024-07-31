@@ -24,9 +24,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  List<FlSpot> temp1Spots = [];
-  List<FlSpot> temp2Spots = [];
-  List<FlSpot> temp3Spots = [];
+  List<FlSpot> temp1Spots = [FlSpot(0, 0)];
+  List<FlSpot> temp2Spots = [FlSpot(0, 0)];
+  List<FlSpot> temp3Spots = [FlSpot(0, 0)];
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
   bool uvIsOn = false;
@@ -34,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   String? _fcmToken;
+  final TextEditingController _temperatureController = TextEditingController();
 
   @override
   void initState() {
@@ -89,6 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _videoPlayerController.dispose();
     _chewieController?.dispose();
+    _temperatureController.dispose();
     super.dispose();
   }
 
@@ -107,14 +109,14 @@ class _HomeScreenState extends State<HomeScreen> {
       spots.add(FlSpot(spots.length.toDouble(), value));
     }
   }
-s
+
   void _updateControlValues() {
     if (_data.containsKey('motorRpm')) {
       motorRpm = double.tryParse(_data['motorRpm'].toString()) ?? 0.0;
     }
-    if (_data.containsKey('targetTemperature')) {
+    if (_data.containsKey('temp1')) {
       double newTemp = double.tryParse(_data['temp1'].toString()) ?? 0.0;
-      if (newTemp >= 0 && newTemp <= 65.99) {
+      if (newTemp >= 0 && newTemp <= 30) {
         targetTemperature = newTemp;
       }
     }
@@ -124,7 +126,7 @@ s
   }
 
   void _checkTemperatureAndSendMessage() {
-    if (targetTemperature >= 65.0) {
+    if (_data['temp1'] >= 30) {
       NotificationService.sendNotification(
         'Temperature Alert',
         'The temperature has reached or exceeded $targetTemperature°C.',
@@ -145,6 +147,21 @@ s
       uvIsOn = !uvIsOn;
       _databaseReference.child('uvIsOn').set(uvIsOn);
     });
+  }
+
+  void _setTargetTemperature() {
+    double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
+    if (newTemp >= 0 && newTemp <= 30) {
+      setState(() {
+        targetTemperature = newTemp;
+        _databaseReference.child('targetTemperature').set(targetTemperature);
+      });
+    } else {
+      // Show an error message or handle the out-of-range value appropriately
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid temperature between 0 and 30.')),
+      );
+    }
   }
 
   @override
@@ -256,19 +273,23 @@ s
                           label: 'Target Temperature',
                           value: targetTemperature,
                           min: 0,
-                          max: 65.99,
+                          max: 30,
                           onChanged: (value) {
-                            if (value >= 0 && value <= 65.99) {
-                              setState(() {
-                                targetTemperature = value;
-                              });
-                            }
+                            setState(() {
+                              targetTemperature = value;
+                            });
                           },
                         ),
+                        TextField(
+                          controller: _temperatureController,
+                          decoration: InputDecoration(
+                            labelText: 'Set Target Temperature',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
                         ElevatedButton(
-                          onPressed: () {
-                            _databaseReference.child('targetTemperature').set(targetTemperature);
-                          },
+                          onPressed: _setTargetTemperature,
                           child: Text('Set Target Temperature'),
                         ),
                       ],
@@ -308,21 +329,21 @@ s
           borderData: FlBorderData(show: true),
           lineBarsData: [
             LineChartBarData(
-              spots: temp1Spots,
+              spots: temp1Spots.isEmpty ? [FlSpot(0, 0)] : temp1Spots,
               isCurved: true,
               color: Colors.red,
               dotData: FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
             ),
             LineChartBarData(
-              spots: temp2Spots,
+              spots: temp2Spots.isEmpty ? [FlSpot(0, 0)] : temp2Spots,
               isCurved: true,
               color: Colors.green,
               dotData: FlDotData(show: false),
               belowBarData: BarAreaData(show: false),
             ),
             LineChartBarData(
-              spots: temp3Spots,
+              spots: temp3Spots.isEmpty ? [FlSpot(0, 0)] : temp3Spots,
               isCurved: true,
               color: Colors.blue,
               dotData: FlDotData(show: false),
