@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomeScreen(title: 'Bio-reactor Home Page'),
+      home: HomeScreen(title: 'Bio-reactor Home Page', cameraStreamUrl: '',),
     );
   }
 }

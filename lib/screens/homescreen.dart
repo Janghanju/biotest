@@ -60,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     });
 
-    // Initialize video player with the RTSP stream URL
     _videoPlayerController = VideoPlayerController.network(widget.cameraStreamUrl)
       ..initialize().then((_) {
         setState(() {
