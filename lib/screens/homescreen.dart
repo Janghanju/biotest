@@ -12,12 +12,10 @@ import '../widgets/control_slider.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
-  final String cameraStreamUrl;
 
   const HomeScreen({
     Key? key,
-    required this.title,
-    required this.cameraStreamUrl,
+    required this.title
   }) : super(key: key);
 
   @override
@@ -33,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool uvIsOn = false;
 
   late VideoPlayerController _videoPlayerController;
-  ChewieController? _chewieController;
   String? _fcmToken;
 
   String selectedTemp = 'temp1';
@@ -287,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: (String? newValue) {
                   setState(() {
                     selectedTemp = newValue!;
-                    _updateTempData(); // 데이터 업데이트
+                    _updateTempData();
                   });
                 },
               ),
