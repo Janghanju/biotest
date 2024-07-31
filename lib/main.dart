@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
 import 'screens/homescreen.dart';
+import 'screens/login.dart';
+import 'screens/signin.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +19,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomeScreen(title: 'Bio-reactor Home Page'),
+      initialRoute: '/login',
+      routes: {
+        '/login': (context) => LoginScreen(),
+        '/signIn': (context) => SignInScreen(),
+        '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page'),
+      },
     );
   }
 }
+
