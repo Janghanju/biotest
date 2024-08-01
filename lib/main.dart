@@ -24,6 +24,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signin': (context) => SignInScreen(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page', cameraStreamUrl: '',),
+        '/getItem': (context) => GetItemScreen(),
       },
     );
   }
