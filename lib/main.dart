@@ -3,6 +3,7 @@ import 'services/firebase_service.dart';
 import 'screens/homescreen.dart';
 import 'screens/login.dart';
 import 'screens/signin.dart';
+import 'screens/getItem.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signIn': (context) => SignInScreen(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page'),
+        '/getItem': (context) => GetItemScreen(),
       },
     );
   }

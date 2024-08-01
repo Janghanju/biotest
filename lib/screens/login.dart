@@ -71,7 +71,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 _errorMessage,
                 style: TextStyle(color: Colors.red),
               ),
-            ]
+            ],
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/signIn');
+              },
+              child: Text('Sign Up'),
+            ),
           ],
         ),
       ),
