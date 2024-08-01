@@ -9,6 +9,7 @@ import '../services/firebase_service.dart';
 import '../services/notification.dart';
 import '../widgets/dataitem.dart';
 import '../widgets/control_slider.dart';
+import 'getItem.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -206,6 +207,17 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Text('Settings'),
               onTap: () {
                 Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('기기등록'),
+              onTap: () {
+                Navigator.pop(context); // Drawer 닫기
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DeviceAddPage()),
+                );
               },
             ),
           ],
