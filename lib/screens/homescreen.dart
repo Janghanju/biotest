@@ -1,5 +1,8 @@
 import 'dart:developer';
 
+import 'package:biotest/screens/getItem.dart';
+import 'package:biotest/screens/login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -36,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     'temp7', 'temp8', 'temp9', 'temp10', 'temp11', 'temp12'
   ];
   final TextEditingController _temperatureController = TextEditingController();
+  final TextEditingController _motorRpmController = TextEditingController();
 
   @override
   void initState() {
@@ -56,26 +60,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // Initialize video player with the RTSP stream URL
-    print("Url Success");
     _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
       ..initialize().then((_) {
         setState(() {});
-        print("videovideo");
         _videoPlayerController.play();
-        print("Video1");
       }).catchError((error) {
         print('Video Player Initialization Error: $error');
       });
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Message received: ${message.notification?.title}');
-    });
-
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Message opened: ${message.notification?.title}');
-    });
-
-    _getFcmToken();
   }
 
   Future<void> _getFcmToken() async {
@@ -87,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _videoPlayerController.dispose();
     _temperatureController.dispose();
+    _motorRpmController.dispose();
     super.dispose();
   }
 
@@ -160,6 +152,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _setMotorRpm() {
+    double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
+    if (newRpm >= 0 && newRpm <= 3000) {
+      setState(() {
+        motorRpm = newRpm;
+        _databaseReference.child('motorRpm').set(motorRpm);
+      });
+    } else {
+      // Show an error message or handle the out-of-range value appropriately
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a valid RPM between 0 and 3000.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,6 +215,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
               },
             ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('기기등록'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DeviceAddPage()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: Text('logout'),
+              onTap: () {
+                Navigator.pop(context);
+                logout(context);
+              },
+            ),
           ],
         ),
       ),
@@ -236,10 +262,10 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
-              Text(
-                'FCM Token: ${_fcmToken ?? 'Loading...'}',
-                style: TextStyle(fontSize: 16, color: Colors.black),
-              ),
+              // Text(
+              //   'FCM Token: ${_fcmToken ?? 'Loading...'}',
+              //   style: TextStyle(fontSize: 16, color: Colors.black),
+              // ),
               SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -259,10 +285,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             });
                           },
                         ),
+                        TextField(
+                          controller: _motorRpmController,
+                          decoration: InputDecoration(
+                            labelText: 'Set Motor RPM',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                        ),
                         ElevatedButton(
-                          onPressed: () {
-                            _databaseReference.child('motorRpm').set(motorRpm);
-                          },
+                          onPressed: _setMotorRpm,
                           child: Text('Set Motor RPM'),
                         ),
                       ],
@@ -362,5 +394,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  void logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+          (route) => false,
+      );
+    } catch (e) {
+      print("Logout error :$e");
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그아웃 실패')),
+      );
+    }
   }
 }

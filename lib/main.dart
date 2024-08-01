@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signIn': (context) => SignInScreen(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page'),
-        '/getItem': (context) => GetItemScreen(),
+        '/getItem': (context) => DeviceAddPage(),
       },
     );
   }
