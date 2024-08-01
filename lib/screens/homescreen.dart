@@ -3,7 +3,6 @@ import 'dart:developer';
 import 'package:biotest/screens/getItem.dart';
 import 'package:biotest/screens/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:video_player/video_player.dart';
@@ -29,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
   bool uvIsOn = false;
+  bool ledIsOn = false;
 
   late VideoPlayerController _videoPlayerController;
   String? _fcmToken;
@@ -45,6 +45,46 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _databaseReference = FirebaseDatabase.instance.ref();
+
+    // 초기 값 파이어베이스에서 가져오기
+    _databaseReference.child('RT_RPM').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          motorRpm = double.tryParse(value.toString()) ?? 0.0;
+          _motorRpmController.text = motorRpm.toStringAsFixed(1);
+        });
+      }
+    });
+
+    _databaseReference.child('RT_Temp').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          targetTemperature = double.tryParse(value.toString()) ?? 0.0;
+          _temperatureController.text = targetTemperature.toStringAsFixed(2);
+        });
+      }
+    });
+
+    _databaseReference.child('uvIsOn').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          uvIsOn = value as bool;
+        });
+      }
+    });
+
+    _databaseReference.child('ledIsOn').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          ledIsOn = value as bool;
+        });
+      }
+    });
+
     _databaseReference.onValue.listen((event) {
       final value = event.snapshot.value as Map<dynamic, dynamic>?;
       setState(() {
@@ -59,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     });
 
-    // Initialize video player with the RTSP stream URL
+    // RTSP 스트림 URL로 비디오 플레이어 초기화
     _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
       ..initialize().then((_) {
         setState(() {});
@@ -91,30 +131,37 @@ class _HomeScreenState extends State<HomeScreen> {
   void _updateTemp(String key, List<FlSpot> spots) {
     if (_data.containsKey(key)) {
       double value = double.tryParse(_data[key].toString()) ?? 0.0;
-      if (spots.length >= 60) {
-        spots.removeAt(0);
+      if (value >= -55 && value <= 125) { // 온도 범위 체크
+        if (spots.length >= 60) {
+          spots.removeAt(0);
+        }
+        spots.add(FlSpot(spots.length.toDouble(), value));
       }
-      spots.add(FlSpot(spots.length.toDouble(), value));
     }
   }
 
   void _updateControlValues() {
-    if (_data.containsKey('motorRpm')) {
-      motorRpm = double.tryParse(_data['motorRpm'].toString()) ?? 0.0;
+    if (_data.containsKey('RT_RPM')) {
+      motorRpm = double.tryParse(_data['RT_RPM'].toString()) ?? 0.0;
+      _motorRpmController.text = motorRpm.toStringAsFixed(1);
     }
-    if (_data.containsKey('temp1')) {
-      double newTemp = double.tryParse(_data['temp1'].toString()) ?? 0.0;
-      if (newTemp >= 0 && newTemp <= 30) {
+    if (_data.containsKey('RT_Temp')) {
+      double newTemp = double.tryParse(_data['RT_Temp'].toString()) ?? 0.0;
+      if (newTemp >= -55 && newTemp <= 125) { // 온도 범위 체크
         targetTemperature = newTemp;
+        _temperatureController.text = targetTemperature.toStringAsFixed(2);
       }
     }
     if (_data.containsKey('uvIsOn')) {
       uvIsOn = _data['uvIsOn'] == true;
     }
+    if (_data.containsKey('ledIsOn')) {
+      ledIsOn = _data['ledIsOn'] == true;
+    }
   }
 
   void _checkTemperatureAndSendMessage() {
-    if (_data['temp1'] >= 30) {
+    if (_data['temp1'] >= 100) {
       NotificationService.sendNotification(
         'Temperature Alert',
         'The temperature has reached or exceeded $targetTemperature°C.',
@@ -137,17 +184,25 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _toggleLED() {
+    setState(() {
+      ledIsOn = !ledIsOn;
+      _databaseReference.child('ledIsOn').set(ledIsOn);
+    });
+  }
+
   void _setTargetTemperature() {
     double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
-    if (newTemp >= 0 && newTemp <= 30) {
+    if (newTemp >= 0 && newTemp <= 80) { // Set Temp 범위 체크
       setState(() {
         targetTemperature = newTemp;
-        _databaseReference.child('targetTemperature').set(targetTemperature);
+        _databaseReference.child('RT_Temp').set(targetTemperature);
+        _temperatureController.text = targetTemperature.toStringAsFixed(2);
       });
     } else {
-      // Show an error message or handle the out-of-range value appropriately
+      // 잘못된 범위 값 처리
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid temperature between 0 and 30.')),
+        SnackBar(content: Text('Please enter a valid temperature between 0 and 80.')),
       );
     }
   }
@@ -157,10 +212,11 @@ class _HomeScreenState extends State<HomeScreen> {
     if (newRpm >= 0 && newRpm <= 3000) {
       setState(() {
         motorRpm = newRpm;
-        _databaseReference.child('motorRpm').set(motorRpm);
+        _databaseReference.child('RT_RPM').set(motorRpm);
+        _motorRpmController.text = motorRpm.toStringAsFixed(1);
       });
     } else {
-      // Show an error message or handle the out-of-range value appropriately
+      // 잘못된 범위 값 처리
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter a valid RPM between 0 and 3000.')),
       );
@@ -217,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: Icon(Icons.settings),
-              title: Text('기기등록'),
+              title: Text('Device'),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -228,7 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ListTile(
               leading: Icon(Icons.settings),
-              title: Text('logout'),
+              title: Text('Logout'),
               onTap: () {
                 Navigator.pop(context);
                 logout(context);
@@ -262,40 +318,45 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
-              // Text(
-              //   'FCM Token: ${_fcmToken ?? 'Loading...'}',
-              //   style: TextStyle(fontSize: 16, color: Colors.black),
-              // ),
-              SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(
                     child: Column(
                       children: [
-                        Text('Motor RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Motor RPM',
+                          label: 'Set RPM : ${motorRpm.toStringAsFixed(1)}',
                           value: motorRpm,
                           min: 0,
                           max: 3000,
                           onChanged: (value) {
                             setState(() {
                               motorRpm = value;
+                              _motorRpmController.text = motorRpm.toStringAsFixed(1);
                             });
                           },
                         ),
                         TextField(
                           controller: _motorRpmController,
                           decoration: InputDecoration(
-                            labelText: 'Set Motor RPM',
+                            labelText: 'Set RPM Value',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            double? newValue = double.tryParse(value);
+                            if (newValue != null && newValue >= 0 && newValue <= 3000) {
+                              setState(() {
+                                motorRpm = newValue;
+                                _databaseReference.child('RT_RPM').set(motorRpm);
+                              });
+                            }
+                          },
                         ),
                         ElevatedButton(
                           onPressed: _setMotorRpm,
-                          child: Text('Set Motor RPM'),
+                          child: Text('Set RPM'),
                         ),
                       ],
                     ),
@@ -303,29 +364,39 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('Target Temperature: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT Temp: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Target Temperature',
+                          label: 'Set Temp: ${targetTemperature.toStringAsFixed(2)}',
                           value: targetTemperature,
                           min: 0,
-                          max: 30,
+                          max: 80,
                           onChanged: (value) {
                             setState(() {
                               targetTemperature = value;
+                              _temperatureController.text = targetTemperature.toStringAsFixed(2);
                             });
                           },
                         ),
                         TextField(
                           controller: _temperatureController,
                           decoration: InputDecoration(
-                            labelText: 'Set Target Temperature',
+                            labelText: 'Set Temp Value',
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            double? newValue = double.tryParse(value);
+                            if (newValue != null && newValue >= 0 && newValue <= 80) {
+                              setState(() {
+                                targetTemperature = newValue;
+                                _databaseReference.child('RT_Temp').set(targetTemperature);
+                              });
+                            }
+                          },
                         ),
                         ElevatedButton(
                           onPressed: _setTargetTemperature,
-                          child: Text('Set Target Temperature'),
+                          child: Text('Set Temp'),
                         ),
                       ],
                     ),
@@ -336,7 +407,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         Text('UV Status: ${uvIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ElevatedButton(
                           onPressed: _toggleUV,
-                          child: Text(uvIsOn ? 'Turn UV Off' : 'Turn UV On'),
+                          child: Text(uvIsOn ? 'Set UV Off' : 'Set UV On'),
+                        ),
+                        Text('LED Status: ${ledIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        ElevatedButton(
+                          onPressed: _toggleLED,
+                          child: Text(ledIsOn ? 'Set LED Off' : 'Set LED On'),
                         ),
                       ],
                     ),
@@ -401,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await FirebaseAuth.instance.signOut();
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => LoginScreen()),
-          (route) => false,
+            (route) => false,
       );
     } catch (e) {
       print("Logout error :$e");
