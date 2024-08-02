@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<List<FlSpot>> tempSpots = List.generate(12, (_) => <FlSpot>[]); // 각 온도 데이터 리스트 생성
   double motorRpm = 0.0;
   double targetTemperature = 0.0;
+  double setTemperature = 0.0;
   bool uvIsOn = false;
   bool ledIsOn = false;
 
@@ -58,6 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     _databaseReference.child('RT_Temp').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          setTemperature = double.tryParse(value.toString()) ?? 0.0;
+          _temperatureController.text = setTemperature.toStringAsFixed(2);
+        });
+      }
+    });
+
+    _databaseReference.child('set_temp').onValue.listen((event) {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
@@ -145,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
       motorRpm = double.tryParse(_data['RT_RPM'].toString()) ?? 0.0;
       _motorRpmController.text = motorRpm.toStringAsFixed(1);
     }
-    if (_data.containsKey('RT_Temp')) {
-      double newTemp = double.tryParse(_data['RT_Temp'].toString()) ?? 0.0;
+    if (_data.containsKey('set_temp')) {
+      double newTemp = double.tryParse(_data['set_temp'].toString()) ?? 0.0;
       if (newTemp >= -55 && newTemp <= 125) { // 온도 범위 체크
         targetTemperature = newTemp;
         _temperatureController.text = targetTemperature.toStringAsFixed(2);
@@ -196,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (newTemp >= 0 && newTemp <= 80) { // Set Temp 범위 체크
       setState(() {
         targetTemperature = newTemp;
-        _databaseReference.child('RT_Temp').set(targetTemperature);
+        _databaseReference.child('set_temp').set(targetTemperature);
         _temperatureController.text = targetTemperature.toStringAsFixed(2);
       });
     } else {
@@ -228,7 +239,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
-        backgroundColor: Colors.lightBlue,
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
@@ -364,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT Temp: ${targetTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT Temp: ${setTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
                           label: 'Set Temp: ${targetTemperature.toStringAsFixed(2)}',
                           value: targetTemperature,
@@ -389,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             if (newValue != null && newValue >= 0 && newValue <= 80) {
                               setState(() {
                                 targetTemperature = newValue;
-                                _databaseReference.child('RT_Temp').set(targetTemperature);
+                                _databaseReference.child('set_temp').set(targetTemperature);
                               });
                             }
                           },
@@ -418,10 +428,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
-              ),
-              Container(
-                color: Colors.lightBlue[50],
-                height: 100,
               ),
             ],
           ),
@@ -452,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
     List<FlSpot> selectedSpots = tempSpots[selectedIndex];
 
     return Container(
-      height: 300,
+      height: 400,
       child: LineChart(
         LineChartData(
           gridData: FlGridData(show: false),
