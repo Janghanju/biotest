@@ -293,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
+              leading: Image.asset('assest\images\responsive.png'),
               title: Text('Device'),
               onTap: () {
                 Navigator.pop(context);
@@ -304,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
+              leading: Image.asset('assests\images\logout.png'),
               title: Text('Logout'),
               onTap: () {
                 Navigator.pop(context);
