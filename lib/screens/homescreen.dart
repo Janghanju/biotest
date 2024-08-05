@@ -50,58 +50,68 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 초기 값 파이어베이스에서 가져오기
     _databaseReference.child('RT_RPM').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
+      final value1 = event.snapshot.value;
+      if (value1 != null) {
         setState(() {
-          rtRPM = double.tryParse(value.toString()) ?? 0.0;
+          rtRPM = double.tryParse(value1.toString()) ?? 0.0;
           _motorRpmController.text = rtRPM.toStringAsFixed(1);
         });
       }
     });
 
-    _databaseReference.child('RT_Temp').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
+    _databaseReference.child('set_RPM').onValue.listen((event) {
+      final value2 = event.snapshot.value;
+      if (value2 != null) {
         setState(() {
-          rtTemp = double.tryParse(value.toString()) ?? 0.0;
+          setRPM = double.tryParse(value2.toString()) ?? 0.0;
+          _motorRpmController.text = setRPM.toStringAsFixed(1);
+        });
+      }
+    });
+
+    _databaseReference.child('RT_Temp').onValue.listen((event) {
+      final value3 = event.snapshot.value;
+      if (value3 != null) {
+        setState(() {
+          rtTemp = double.tryParse(value3.toString()) ?? 0.0;
           _temperatureController.text = rtTemp.toStringAsFixed(2);
         });
       }
     });
 
     _databaseReference.child('set_Temp').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
+      final value4 = event.snapshot.value;
+      if (value4 != null) {
         setState(() {
-          setTemp = double.tryParse(value.toString()) ?? 0.0;
+          setTemp = double.tryParse(value4.toString()) ?? 0.0;
           _temperatureController.text = setTemp.toStringAsFixed(2);
         });
       }
     });
 
     _databaseReference.child('UV').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
+      final value5 = event.snapshot.value;
+      if (value5 != null) {
         setState(() {
-          UV = value as bool;
+          UV = value5 as bool;
         });
       }
     });
 
     _databaseReference.child('LED').onValue.listen((event) {
-      final value = event.snapshot.value;
-      if (value != null) {
+      final value6 = event.snapshot.value;
+      if (value6 != null) {
         setState(() {
-          LED = value as bool;
+          LED = value6 as bool;
         });
       }
     });
 
     _databaseReference.onValue.listen((event) {
-      final value = event.snapshot.value as Map<dynamic, dynamic>?;
+      final value7 = event.snapshot.value as Map<dynamic, dynamic>?;
       setState(() {
-        if (value != null) {
-          _data = value.cast<String, dynamic>();
+        if (value7 != null) {
+          _data = value7.cast<String, dynamic>();
           _updateTempData();
           _updateControlValues();
           _checkTemperatureAndSendMessage();
@@ -360,12 +370,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           value: setRPM,
                           min: 0,
                           max: 3000,
-                          onChanged: (value) {
+                          onChanged: (value2) {
                             setState(() {
-                              setRPM = value;
+                              setRPM = value2;
                               _motorRpmController.text = setRPM.toStringAsFixed(1);
                             });
-                          },s
+                          },
                         ),
                         TextField(
                           controller: _motorRpmController,
@@ -374,11 +384,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 3000) {
+                          onChanged: (value2) {
+                            double? newValue1 = double.tryParse(value2);
+                            if (newValue1 != null && newValue1 >= 0 && newValue1 <= 3000) {
                               setState(() {
-                                setRPM = newValue;
+                                setRPM = newValue1;
                                 _databaseReference.child('set_RPM').set(setRPM);
                               });
                             }
@@ -400,9 +410,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           value: setTemp,
                           min: 0,
                           max: 80,
-                          onChanged: (value) {
+                          onChanged: (value4) {
                             setState(() {
-                              setTemp = value;
+                              setTemp = value4;
                               _temperatureController.text = setTemp.toStringAsFixed(2);
                             });
                           },
@@ -414,11 +424,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 80) {
+                          onChanged: (value4) {
+                            double? newValue2 = double.tryParse(value4);
+                            if (newValue2 != null && newValue2 >= 0 && newValue2 <= 80) {
                               setState(() {
-                                setTemp = newValue;
+                                setTemp = newValue2;
                                 _databaseReference.child('set_Temp').set(setTemp);
                               });
                             }
@@ -460,9 +470,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDropdown() {
     return DropdownButton<String>(
       value: selectedTemp,
-      onChanged: (String? newValue) {
+      onChanged: (String? newValue3) {
         setState(() {
-          selectedTemp = newValue!;
+          selectedTemp = newValue3!;
         });
       },
       items: tempKeys.map<DropdownMenuItem<String>>((String value) {
