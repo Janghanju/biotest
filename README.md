@@ -1,16 +1,8 @@
 # biotest
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# 현재 기능 구현한 목록
+1. 로그인, 회원가입, 마이페이지
+2. firebase realtime DB에서 데이터를 받아와서 화면 표기
+3. 차트구현 및 UV, Motor 제어
+# Issue
+1. 지문인식 기능 구현중 권한 에러 발생
+2. Manifest에 권한 추가했지만 실패
