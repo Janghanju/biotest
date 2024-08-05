@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'fingerPrint.dart';
+import 'fingerprint.dart'; // 지문 인증 페이지를 import합니다.
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -53,11 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: '이메일'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: '비밀번호'),
               obscureText: true,
             ),
             SizedBox(height: 20),
@@ -75,9 +77,19 @@ class _LoginScreenState extends State<LoginScreen> {
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/signIn');
+                Navigator.pushNamed(context, '/signUp');
               },
               child: Text('Sign Up'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => FingerprintScreen()),
+                );
+              },
+              child: Text('Use Fingerprint'),
             ),
           ],
         ),
@@ -85,3 +97,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

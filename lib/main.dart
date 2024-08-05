@@ -1,3 +1,5 @@
+import 'package:biotest/screens/fingerPrint.dart';
+import 'package:biotest/screens/myPageScreen.dart';
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
 import 'screens/homescreen.dart';
@@ -23,9 +25,11 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => LoginScreen(),
-        '/signIn': (context) => SignInScreen(),
+        '/signIn': (context) => SignUpPage(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page'),
         '/getItem': (context) => DeviceAddPage(),
+        '/ProfilePage': (context) => ProfilePage(),
+        '/fingerPrint': (context) => FingerprintScreen()
       },
     );
   }
