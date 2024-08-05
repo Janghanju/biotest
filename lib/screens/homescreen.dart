@@ -25,18 +25,19 @@ class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
   List<List<FlSpot>> tempSpots = List.generate(12, (_) => <FlSpot>[]); // 각 온도 데이터 리스트 생성
-  double motorRpm = 0.0;
-  double targetTemperature = 0.0;
-  double setTemperature = 0.0;
-  bool uvIsOn = false;
-  bool ledIsOn = false;
+  double rtRPM = 0; // RT RPM 값
+  double setRPM = 0.0; // Set RPM 값
+  double rtTemp = 0.0; // RT Temp 값
+  double setTemp = 0.0; // Set Temp 값
+  bool UV = false; // UV 상태
+  bool LED = false; // LED 상태
 
   late VideoPlayerController _videoPlayerController;
   String? _fcmToken;
 
-  String selectedTemp = 'temp1';
+  String selectedTemp = 'RT_Temp';
   final List<String> tempKeys = [
-    'temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6',
+    'RT_Temp', 'RT_RPM', 'PH', 'UV', 'LED', 'temp6',
     'temp7', 'temp8', 'temp9', 'temp10', 'temp11', 'temp12'
   ];
   final TextEditingController _temperatureController = TextEditingController();
@@ -52,8 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          motorRpm = double.tryParse(value.toString()) ?? 0.0;
-          _motorRpmController.text = motorRpm.toStringAsFixed(1);
+          rtRPM = double.tryParse(value.toString()) ?? 0.0;
+          _motorRpmController.text = rtRPM.toStringAsFixed(1);
         });
       }
     });
@@ -62,36 +63,36 @@ class _HomeScreenState extends State<HomeScreen> {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          setTemperature = double.tryParse(value.toString()) ?? 0.0;
-          _temperatureController.text = setTemperature.toStringAsFixed(2);
+          rtTemp = double.tryParse(value.toString()) ?? 0.0;
+          _temperatureController.text = rtTemp.toStringAsFixed(2);
         });
       }
     });
 
-    _databaseReference.child('set_temp').onValue.listen((event) {
+    _databaseReference.child('set_Temp').onValue.listen((event) {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          targetTemperature = double.tryParse(value.toString()) ?? 0.0;
-          _temperatureController.text = targetTemperature.toStringAsFixed(2);
+          setTemp = double.tryParse(value.toString()) ?? 0.0;
+          _temperatureController.text = setTemp.toStringAsFixed(2);
         });
       }
     });
 
-    _databaseReference.child('uvIsOn').onValue.listen((event) {
+    _databaseReference.child('UV').onValue.listen((event) {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          uvIsOn = value as bool;
+          UV = value as bool;
         });
       }
     });
 
-    _databaseReference.child('ledIsOn').onValue.listen((event) {
+    _databaseReference.child('LED').onValue.listen((event) {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          ledIsOn = value as bool;
+          LED = value as bool;
         });
       }
     });
@@ -120,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
   }
 
+  // FCM 토큰 가져오기
   Future<void> _getFcmToken() async {
     _fcmToken = await FirebaseService.getFcmToken();
     debugPrint("FCM:$_fcmToken");
@@ -133,12 +135,14 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // 온도 데이터를 업데이트
   void _updateTempData() {
     for (int i = 0; i < tempKeys.length; i++) {
       _updateTemp(tempKeys[i], tempSpots[i]);
     }
   }
 
+  // 특정 온도 데이터를 업데이트
   void _updateTemp(String key, List<FlSpot> spots) {
     if (_data.containsKey(key)) {
       double value = double.tryParse(_data[key].toString()) ?? 0.0;
@@ -151,35 +155,38 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 컨트롤 값 업데이트
   void _updateControlValues() {
     if (_data.containsKey('RT_RPM')) {
-      motorRpm = double.tryParse(_data['RT_RPM'].toString()) ?? 0.0;
-      _motorRpmController.text = motorRpm.toStringAsFixed(1);
+      rtRPM = double.tryParse(_data['RT_RPM'].toString()) ?? 0;
+      _motorRpmController.text = rtRPM.toStringAsFixed(1);
     }
-    if (_data.containsKey('set_temp')) {
-      double newTemp = double.tryParse(_data['set_temp'].toString()) ?? 0.0;
+    if (_data.containsKey('set_Temp')) {
+      double newTemp = double.tryParse(_data['set_Temp'].toString()) ?? 0.0;
       if (newTemp >= -55 && newTemp <= 125) { // 온도 범위 체크
-        targetTemperature = newTemp;
-        _temperatureController.text = targetTemperature.toStringAsFixed(2);
+        setTemp = newTemp;
+        _temperatureController.text = setTemp.toStringAsFixed(2);
       }
     }
-    if (_data.containsKey('uvIsOn')) {
-      uvIsOn = _data['uvIsOn'] == true;
+    if (_data.containsKey('UV')) {
+      UV = _data['UV'] == true;
     }
-    if (_data.containsKey('ledIsOn')) {
-      ledIsOn = _data['ledIsOn'] == true;
+    if (_data.containsKey('LED')) {
+      LED = _data['LED'] == true;
     }
   }
 
+  // 온도 알림 체크 및 메시지 전송
   void _checkTemperatureAndSendMessage() {
     if (_data['temp1'] >= 100) {
       NotificationService.sendNotification(
         'Temperature Alert',
-        'The temperature has reached or exceeded $targetTemperature°C.',
+        'The temperature has reached or exceeded $setTemp°C.',
       );
     }
   }
 
+  // 그래프 리셋
   void _resetGraph() {
     setState(() {
       for (int i = 0; i < tempSpots.length; i++) {
@@ -188,27 +195,30 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // UV 상태 토글
   void _toggleUV() {
     setState(() {
-      uvIsOn = !uvIsOn;
-      _databaseReference.child('uvIsOn').set(uvIsOn);
+      UV = !UV;
+      _databaseReference.child('UV').set(UV);
     });
   }
 
+  // LED 상태 토글
   void _toggleLED() {
     setState(() {
-      ledIsOn = !ledIsOn;
-      _databaseReference.child('ledIsOn').set(ledIsOn);
+      LED = !LED;
+      _databaseReference.child('LED').set(LED);
     });
   }
 
+  // 목표 온도 설정
   void _setTargetTemperature() {
     double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
     if (newTemp >= 0 && newTemp <= 80) { // Set Temp 범위 체크
       setState(() {
-        targetTemperature = newTemp;
-        _databaseReference.child('set_temp').set(targetTemperature);
-        _temperatureController.text = targetTemperature.toStringAsFixed(2);
+        setTemp = newTemp;
+        _databaseReference.child('set_Temp').set(setTemp);
+        _temperatureController.text = setTemp.toStringAsFixed(2);
       });
     } else {
       // 잘못된 범위 값 처리
@@ -218,13 +228,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // 모터 RPM 설정
   void _setMotorRpm() {
     double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
     if (newRpm >= 0 && newRpm <= 3000) {
       setState(() {
-        motorRpm = newRpm;
-        _databaseReference.child('RT_RPM').set(motorRpm);
-        _motorRpmController.text = motorRpm.toStringAsFixed(1);
+        setRPM = newRpm;
+        _databaseReference.child('set_RPM').set(setRPM);
+        _motorRpmController.text = setRPM.toStringAsFixed(1);
       });
     } else {
       // 잘못된 범위 값 처리
@@ -318,9 +329,18 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp1')),
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp2')),
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp3')),
+                  Expanded(child: DataItem(data: _data, dataKey: 'RT_Temp')),
+                  Expanded(child: DataItem(data: _data, dataKey: 'RT_RPM')),
+                  Expanded(child: DataItem(data: _data, dataKey: 'PH')),
+                ],
+              ),
+              // 추가된 줄
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: DataItem(data: _data, dataKey: 'temp6')),
+                  Expanded(child: DataItem(data: _data, dataKey: 'temp7')),
+                  Expanded(child: DataItem(data: _data, dataKey: 'temp8')),
                 ],
               ),
               SizedBox(height: 20),
@@ -334,18 +354,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT RPM: ${rtRPM.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Set RPM : ${motorRpm.toStringAsFixed(1)}',
-                          value: motorRpm,
+                          label: 'Set RPM: ${setRPM.toStringAsFixed(1)}',
+                          value: setRPM,
                           min: 0,
                           max: 3000,
                           onChanged: (value) {
                             setState(() {
-                              motorRpm = value;
-                              _motorRpmController.text = motorRpm.toStringAsFixed(1);
+                              setRPM = value;
+                              _motorRpmController.text = setRPM.toStringAsFixed(1);
                             });
-                          },
+                          },s
                         ),
                         TextField(
                           controller: _motorRpmController,
@@ -358,8 +378,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             double? newValue = double.tryParse(value);
                             if (newValue != null && newValue >= 0 && newValue <= 3000) {
                               setState(() {
-                                motorRpm = newValue;
-                                _databaseReference.child('RT_RPM').set(motorRpm);
+                                setRPM = newValue;
+                                _databaseReference.child('set_RPM').set(setRPM);
                               });
                             }
                           },
@@ -374,16 +394,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT Temp: ${setTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT Temp: ${rtTemp.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Set Temp: ${targetTemperature.toStringAsFixed(2)}',
-                          value: targetTemperature,
+                          label: 'Set Temp: ${setTemp.toStringAsFixed(2)}',
+                          value: setTemp,
                           min: 0,
                           max: 80,
                           onChanged: (value) {
                             setState(() {
-                              targetTemperature = value;
-                              _temperatureController.text = targetTemperature.toStringAsFixed(2);
+                              setTemp = value;
+                              _temperatureController.text = setTemp.toStringAsFixed(2);
                             });
                           },
                         ),
@@ -398,8 +418,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             double? newValue = double.tryParse(value);
                             if (newValue != null && newValue >= 0 && newValue <= 80) {
                               setState(() {
-                                targetTemperature = newValue;
-                                _databaseReference.child('set_temp').set(targetTemperature);
+                                setTemp = newValue;
+                                _databaseReference.child('set_Temp').set(setTemp);
                               });
                             }
                           },
@@ -414,15 +434,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('UV Status: ${uvIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('UV Status: ${UV ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ElevatedButton(
                           onPressed: _toggleUV,
-                          child: Text(uvIsOn ? 'Set UV Off' : 'Set UV On'),
+                          child: Text(UV ? 'Set UV Off' : 'Set UV On'),
                         ),
-                        Text('LED Status: ${ledIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('LED Status: ${LED ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ElevatedButton(
                           onPressed: _toggleLED,
-                          child: Text(ledIsOn ? 'Set LED Off' : 'Set LED On'),
+                          child: Text(LED ? 'Set LED Off' : 'Set LED On'),
                         ),
                       ],
                     ),
@@ -436,6 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 드롭다운 메뉴 위젯 생성
   Widget _buildDropdown() {
     return DropdownButton<String>(
       value: selectedTemp,
@@ -453,6 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 그래프 위젯 생성
   Widget _buildGraph() {
     int selectedIndex = tempKeys.indexOf(selectedTemp);
     List<FlSpot> selectedSpots = tempSpots[selectedIndex];
@@ -478,6 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 로그아웃 함수
   void logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
