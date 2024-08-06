@@ -29,6 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   double setRPM = 0.0; // Set RPM 값
   double rtTemp = 0.0; // RT Temp 값
   double setTemp = 0.0; // Set Temp 값
+  double userSetRPM = 0.0; // 사용자 입력 Set RPM
+  double userSetTemp = 0.0; // 사용자 입력 Set Temp
   bool UV = false; // UV 상태
   bool LED = false; // LED 상태
 
@@ -54,7 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value1 != null) {
         setState(() {
           rtRPM = double.tryParse(value1.toString()) ?? 0.0;
-          _motorRpmController.text = rtRPM.toStringAsFixed(1);
         });
       }
     });
@@ -64,7 +65,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value2 != null) {
         setState(() {
           setRPM = double.tryParse(value2.toString()) ?? 0.0;
-          _motorRpmController.text = setRPM.toStringAsFixed(1);
+          if (!_motorRpmController.text.isEmpty && userSetRPM != setRPM) {
+            _motorRpmController.text = setRPM.toStringAsFixed(1);
+          }
         });
       }
     });
@@ -74,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value3 != null) {
         setState(() {
           rtTemp = double.tryParse(value3.toString()) ?? 0.0;
-          _temperatureController.text = rtTemp.toStringAsFixed(2);
         });
       }
     });
@@ -84,7 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value4 != null) {
         setState(() {
           setTemp = double.tryParse(value4.toString()) ?? 0.0;
-          _temperatureController.text = setTemp.toStringAsFixed(2);
+          if (!_temperatureController.text.isEmpty && userSetTemp != setTemp) {
+            _temperatureController.text = setTemp.toStringAsFixed(2);
+          }
         });
       }
     });
@@ -169,13 +173,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void _updateControlValues() {
     if (_data.containsKey('RT_RPM')) {
       rtRPM = double.tryParse(_data['RT_RPM'].toString()) ?? 0;
-      _motorRpmController.text = rtRPM.toStringAsFixed(1);
     }
     if (_data.containsKey('set_Temp')) {
       double newTemp = double.tryParse(_data['set_Temp'].toString()) ?? 0.0;
       if (newTemp >= -55 && newTemp <= 125) { // 온도 범위 체크
         setTemp = newTemp;
-        _temperatureController.text = setTemp.toStringAsFixed(2);
       }
     }
     if (_data.containsKey('UV')) {
@@ -226,9 +228,8 @@ class _HomeScreenState extends State<HomeScreen> {
     double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
     if (newTemp >= 0 && newTemp <= 80) { // Set Temp 범위 체크
       setState(() {
-        setTemp = newTemp;
-        _databaseReference.child('set_Temp').set(setTemp);
-        _temperatureController.text = setTemp.toStringAsFixed(2);
+        userSetTemp = newTemp;
+        _databaseReference.child('set_Temp').set(userSetTemp);
       });
     } else {
       // 잘못된 범위 값 처리
@@ -243,9 +244,8 @@ class _HomeScreenState extends State<HomeScreen> {
     double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
     if (newRpm >= 0 && newRpm <= 3000) {
       setState(() {
-        setRPM = newRpm;
-        _databaseReference.child('set_RPM').set(setRPM);
-        _motorRpmController.text = setRPM.toStringAsFixed(1);
+        userSetRPM = newRpm;
+        _databaseReference.child('set_RPM').set(userSetRPM);
       });
     } else {
       // 잘못된 범위 값 처리
@@ -366,14 +366,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text('RT RPM: ${rtRPM.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Set RPM: ${setRPM.toStringAsFixed(1)}',
-                          value: setRPM,
+                          label: 'Set RPM: ${userSetRPM.toStringAsFixed(1)}',
+                          value: userSetRPM,
                           min: 0,
                           max: 3000,
                           onChanged: (value2) {
                             setState(() {
-                              setRPM = value2;
-                              _motorRpmController.text = setRPM.toStringAsFixed(1);
+                              userSetRPM = value2;
+                              _motorRpmController.text = userSetRPM.toStringAsFixed(1);
                             });
                           },
                         ),
@@ -388,8 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             double? newValue1 = double.tryParse(value2);
                             if (newValue1 != null && newValue1 >= 0 && newValue1 <= 3000) {
                               setState(() {
-                                setRPM = newValue1;
-                                _databaseReference.child('set_RPM').set(setRPM);
+                                userSetRPM = newValue1;
                               });
                             }
                           },
@@ -406,14 +405,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         Text('RT Temp: ${rtTemp.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
                         ControlSlider(
-                          label: 'Set Temp: ${setTemp.toStringAsFixed(2)}',
-                          value: setTemp,
+                          label: 'Set Temp: ${userSetTemp.toStringAsFixed(2)}',
+                          value: userSetTemp,
                           min: 0,
                           max: 80,
                           onChanged: (value4) {
                             setState(() {
-                              setTemp = value4;
-                              _temperatureController.text = setTemp.toStringAsFixed(2);
+                              userSetTemp = value4;
+                              _temperatureController.text = userSetTemp.toStringAsFixed(2);
                             });
                           },
                         ),
@@ -428,8 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             double? newValue2 = double.tryParse(value4);
                             if (newValue2 != null && newValue2 >= 0 && newValue2 <= 80) {
                               setState(() {
-                                setTemp = newValue2;
-                                _databaseReference.child('set_Temp').set(setTemp);
+                                userSetTemp = newValue2;
                               });
                             }
                           },
