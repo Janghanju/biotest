@@ -44,14 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _databaseReference = FirebaseDatabase.instance.ref();
+    _initializeFirebaseListeners();
+    _initializeVideoPlayer();
+  }
 
-    // 초기 값 파이어베이스에서 가져오기
+  void _initializeFirebaseListeners() {
     _databaseReference.child('RT_RPM').onValue.listen((event) {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
           motorRpm = double.tryParse(value.toString()) ?? 0.0;
-          _motorRpmController.text = motorRpm.toStringAsFixed(1);
         });
       }
     });
@@ -61,7 +63,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value != null) {
         setState(() {
           setTemperature = double.tryParse(value.toString()) ?? 0.0;
-          _temperatureController.text = setTemperature.toStringAsFixed(2);
         });
       }
     });
@@ -96,31 +97,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _databaseReference.onValue.listen((event) {
       final value = event.snapshot.value as Map<dynamic, dynamic>?;
-      setState(() {
-        if (value != null) {
+      if (value != null) {
+        setState(() {
           _data = value.cast<String, dynamic>();
           _updateTempData();
           _updateControlValues();
           _checkTemperatureAndSendMessage();
-        } else {
-          _data = {};
-        }
-      });
+        });
+      }
     });
+  }
 
-    // RTSP 스트림 URL로 비디오 플레이어 초기화
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
+  void _initializeVideoPlayer() {
+    _videoPlayerController = VideoPlayerController.networkUrl(
+      Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"),
+    )
       ..initialize().then((_) {
         setState(() {});
         _videoPlayerController.play();
       }).catchError((error) {
         print('Video Player Initialization Error: $error');
       });
-  }
-
-  Future<void> _getFcmToken() async {
-    _fcmToken = await FirebaseService.getFcmToken();
-    debugPrint("FCM:$_fcmToken");
   }
 
   @override
@@ -140,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _updateTemp(String key, List<FlSpot> spots) {
     if (_data.containsKey(key)) {
       double value = double.tryParse(_data[key].toString()) ?? 0.0;
-      if (value >= -55 && value <= 125) { // 온도 범위 체크
+      if (value >= -55 && value <= 125) {
         if (spots.length >= 60) {
           spots.removeAt(0);
         }
@@ -152,11 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _updateControlValues() {
     if (_data.containsKey('RT_RPM')) {
       motorRpm = double.tryParse(_data['RT_RPM'].toString()) ?? 0.0;
-      _motorRpmController.text = motorRpm.toStringAsFixed(1);
     }
     if (_data.containsKey('set_temp')) {
       double newTemp = double.tryParse(_data['set_temp'].toString()) ?? 0.0;
-      if (newTemp >= -55 && newTemp <= 125) { // 온도 범위 체크
+      if (newTemp >= -55 && newTemp <= 125) {
         targetTemperature = newTemp;
         _temperatureController.text = targetTemperature.toStringAsFixed(2);
       }
@@ -201,34 +197,44 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _setTargetTemperature() {
-    double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
-    if (newTemp >= 0 && newTemp <= 80) { // Set Temp 범위 체크
+    int newTemp = int.tryParse(_temperatureController.text) ?? 0;
+    if (newTemp >= 0 && newTemp <= 100) { // Updated Set Temp 범위 체크
+      _databaseReference.child('set_temp').set(newTemp);
       setState(() {
-        targetTemperature = newTemp;
-        _databaseReference.child('set_temp').set(targetTemperature);
-        _temperatureController.text = targetTemperature.toStringAsFixed(2);
+        targetTemperature = newTemp.toDouble();
+        _temperatureController.text = newTemp.toString();
       });
     } else {
-      // 잘못된 범위 값 처리
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid temperature between 0 and 80.')),
-      );
+      _showErrorSnackBar('Please enter a valid temperature between 0 and 100.');
     }
   }
 
   void _setMotorRpm() {
-    double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
-    if (newRpm >= 0 && newRpm <= 3000) {
+    int newRpm = int.tryParse(_motorRpmController.text) ?? 0;
+    if (newRpm >= 0 && newRpm <= 2000) { // Updated Set RPM 범위 체크
+      _databaseReference.child('set_RPM').set(newRpm);
       setState(() {
-        motorRpm = newRpm;
-        _databaseReference.child('RT_RPM').set(motorRpm);
-        _motorRpmController.text = motorRpm.toStringAsFixed(1);
+        _motorRpmController.text = newRpm.toString();
       });
     } else {
-      // 잘못된 범위 값 처리
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid RPM between 0 and 3000.')),
+      _showErrorSnackBar('Please enter a valid RPM between 0 and 2000.');
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+            (route) => false,
       );
+    } catch (e) {
+      print("로그아웃 에러 :$e");
+      _showErrorSnackBar('로그아웃 실패');
     }
   }
 
@@ -249,100 +255,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.device_hub),
-              title: Text('Device'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => DeviceAddPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
-              onTap: () {
-                Navigator.pop(context);
-                logout(context);
-              },
-            ),
-          ],
-        ),
-      ),
+      drawer: _buildDrawer(),
       body: Container(
         color: Colors.grey[200],
         child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              AspectRatio(
-                aspectRatio: _videoPlayerController.value.aspectRatio,
-                child: _videoPlayerController.value.isInitialized
-                    ? VideoPlayer(_videoPlayerController)
-                    : Center(child: CircularProgressIndicator()),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: DataItem(
-                        data: _data,
-                        dataKey: 'temp1',
-                        icon: Icon(Icons.thermostat, color: Colors.red),
-                      ),
-                    ),
-                    Expanded(
-                      child: DataItem(
-                        data: _data,
-                        dataKey: 'temp2',
-                        icon: Icon(Icons.thermostat, color: Colors.orange),
-                      ),
-                    ),
-                    Expanded(
-                      child: DataItem(
-                        data: _data,
-                        dataKey: 'temp3',
-                        icon: Icon(Icons.thermostat, color: Colors.yellow),
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
+              _buildVideoPlayer(),
               SizedBox(height: 20),
               _buildDropdown(),
               SizedBox(height: 20),
@@ -355,6 +275,63 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  Widget _buildDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+            child: Text(
+              'Menu',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
+            ),
+          ),
+          _buildDrawerItem(Icons.home, 'Home', () {
+            Navigator.pop(context);
+          }),
+          _buildDrawerItem(Icons.settings, 'Settings', () {
+            Navigator.pop(context);
+          }),
+          _buildDrawerItem(Icons.device_hub, 'Device', () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => DeviceAddPage()),
+            );
+          }),
+          _buildDrawerItem(Icons.logout, 'Logout', () {
+            Navigator.pop(context);
+            logout(context);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    return AspectRatio(
+      aspectRatio: _videoPlayerController.value.aspectRatio,
+      child: _videoPlayerController.value.isInitialized
+          ? VideoPlayer(_videoPlayerController)
+          : Center(child: CircularProgressIndicator()),
+    );
+  }
+
 
   Widget _buildDropdown() {
     return Padding(
@@ -506,11 +483,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             keyboardType: TextInputType.number,
             onChanged: (value) {
-              double? newValue = double.tryParse(value);
-              if (newValue != null && newValue >= 0 && newValue <= 3000) {
+              // newValue is not set here to avoid interfering with set state
+              int? newValue = int.tryParse(value);
+              if (newValue != null && newValue >= 0 && newValue <= 2000) {
                 setState(() {
-                  motorRpm = newValue;
-                  _databaseReference.child('RT_RPM').set(motorRpm);
+                  _motorRpmController.text = newValue.toString();
                 });
               }
             },
@@ -552,11 +529,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             keyboardType: TextInputType.number,
             onChanged: (value) {
-              double? newValue = double.tryParse(value);
-              if (newValue != null && newValue >= 0 && newValue <= 80) {
+              // newValue is not set here to avoid interfering with set state
+              int? newValue = int.tryParse(value);
+              if (newValue != null && newValue >= 0 && newValue <= 100) {
                 setState(() {
-                  targetTemperature = newValue;
-                  _databaseReference.child('set_temp').set(targetTemperature);
+                  _temperatureController.text = newValue.toString();
                 });
               }
             },
@@ -608,19 +585,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  void logout(BuildContext context) async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-            (route) => false,
-      );
-    } catch (e) {
-      print("로그아웃 에러 :$e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그아웃 실패')),
-      );
-    }
-  }
 }
-
