@@ -23,7 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
   List<List<FlSpot>> tempSpots = List.generate(12, (_) => <FlSpot>[]); // 각 온도 데이터 리스트 생성
-  double motorRpm = 0.0;
+  double targetMotorRpm = 0.0;
+  double setMotorRpm = 0.0;
   double targetTemperature = 0.0;
   double setTemperature = 0.0;
   bool uvIsOn = false;
@@ -53,7 +54,17 @@ class _HomeScreenState extends State<HomeScreen> {
       final value = event.snapshot.value;
       if (value != null) {
         setState(() {
-          motorRpm = double.tryParse(value.toString()) ?? 0.0;
+          setMotorRpm = double.tryParse(value.toString()) ?? 0.0;
+        });
+      }
+    });
+
+    _databaseReference.child('set_RPM').onValue.listen((event) {
+      final value = event.snapshot.value;
+      if (value != null) {
+        setState(() {
+          targetMotorRpm = double.tryParse(value.toString()) ?? 0.0;
+          _motorRpmController.text = targetMotorRpm.toString();
         });
       }
     });
@@ -72,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (value != null) {
         setState(() {
           targetTemperature = double.tryParse(value.toString()) ?? 0.0;
-          _temperatureController.text = targetTemperature.toStringAsFixed(2);
+          _temperatureController.text = targetTemperature.toString();
         });
       }
     });
@@ -102,7 +113,6 @@ class _HomeScreenState extends State<HomeScreen> {
           _data = value.cast<String, dynamic>();
           _updateTempData();
           _updateControlValues();
-          _checkTemperatureAndSendMessage();
         });
       }
     });
@@ -141,20 +151,19 @@ class _HomeScreenState extends State<HomeScreen> {
         if (spots.length >= 60) {
           spots.removeAt(0);
         }
-        spots.add(FlSpot(spots.length.toDouble(), value));
       }
     }
   }
 
   void _updateControlValues() {
-    if (_data.containsKey('RT_RPM')) {
-      motorRpm = double.tryParse(_data['RT_RPM'].toString()) ?? 0.0;
+    if (_data.containsKey('set_RPM')) {
+      targetMotorRpm = double.tryParse(_data['set_RPM'].toString()) ?? 0;
     }
     if (_data.containsKey('set_temp')) {
-      double newTemp = double.tryParse(_data['set_temp'].toString()) ?? 0.0;
+      double newTemp = double.tryParse(_data['set_temp'].toString()) ?? 0;
       if (newTemp >= -55 && newTemp <= 125) {
         targetTemperature = newTemp;
-        _temperatureController.text = targetTemperature.toStringAsFixed(2);
+        _temperatureController.text = targetTemperature.toString();
       }
     }
     if (_data.containsKey('uvIsOn')) {
@@ -165,14 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _checkTemperatureAndSendMessage() {
-    if (_data['temp1'] >= 100) {
-      NotificationService.sendNotification(
-        'Temperature Alert',
-        'The temperature has reached or exceeded $targetTemperature°C.',
-      );
-    }
-  }
 
   void _resetGraph() {
     setState(() {
