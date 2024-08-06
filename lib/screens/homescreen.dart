@@ -483,6 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
+            maxLength: 4,
             onChanged: (value) {
               // newValue is not set here to avoid interfering with set state
               int? newValue = int.tryParse(value);
@@ -529,6 +530,7 @@ class _HomeScreenState extends State<HomeScreen> {
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
+            maxLength: 4,
             onChanged: (value) {
               // newValue is not set here to avoid interfering with set state
               int? newValue = int.tryParse(value);
