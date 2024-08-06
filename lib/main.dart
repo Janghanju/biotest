@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/signUp': (context) => SignUpPage(),
-        '/home': (context) => HomeScreen(title: 'Bio-reactor Home Page'),
+        '/home': (context) => HomeScreen(title: 'Bio-reactor'),
         '/getItem': (context) => DeviceAddPage(),
         '/ProfilePage': (context) => ProfilePage(),
         '/fingerPrint': (context) => FingerprintScreen()

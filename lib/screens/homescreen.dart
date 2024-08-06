@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:biotest/screens/getItem.dart';
 import 'package:biotest/screens/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -282,7 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Image.asset('assest\images\responsive.png'),
+              leading: Icon(Icons.device_hub),
               title: Text('Device'),
               onTap: () {
                 Navigator.pop(context);
@@ -293,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Image.asset('assests\images\logout.png'),
+              leading: Icon(Icons.logout),
               title: Text('Logout'),
               onTap: () {
                 Navigator.pop(context);
@@ -315,120 +313,42 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? VideoPlayer(_videoPlayerController)
                     : Center(child: CircularProgressIndicator()),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp1')),
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp2')),
-                  Expanded(child: DataItem(data: _data, dataKey: 'temp3')),
-                ],
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Expanded(
+                      child: DataItem(
+                        data: _data,
+                        dataKey: 'temp1',
+                        icon: Icon(Icons.thermostat, color: Colors.red),
+                      ),
+                    ),
+                    Expanded(
+                      child: DataItem(
+                        data: _data,
+                        dataKey: 'temp2',
+                        icon: Icon(Icons.thermostat, color: Colors.orange),
+                      ),
+                    ),
+                    Expanded(
+                      child: DataItem(
+                        data: _data,
+                        dataKey: 'temp3',
+                        icon: Icon(Icons.thermostat, color: Colors.yellow),
+                      ),
+                    ),
+
+                  ],
+                ),
               ),
               SizedBox(height: 20),
               _buildDropdown(),
               SizedBox(height: 20),
               _buildGraph(),
               SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text('RT RPM: ${motorRpm.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                        ControlSlider(
-                          label: 'Set RPM : ${motorRpm.toStringAsFixed(1)}',
-                          value: motorRpm,
-                          min: 0,
-                          max: 3000,
-                          onChanged: (value) {
-                            setState(() {
-                              motorRpm = value;
-                              _motorRpmController.text = motorRpm.toStringAsFixed(1);
-                            });
-                          },
-                        ),
-                        TextField(
-                          controller: _motorRpmController,
-                          decoration: InputDecoration(
-                            labelText: 'Set RPM Value',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 3000) {
-                              setState(() {
-                                motorRpm = newValue;
-                                _databaseReference.child('RT_RPM').set(motorRpm);
-                              });
-                            }
-                          },
-                        ),
-                        ElevatedButton(
-                          onPressed: _setMotorRpm,
-                          child: Text('Set RPM'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text('RT Temp: ${setTemperature.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                        ControlSlider(
-                          label: 'Set Temp: ${targetTemperature.toStringAsFixed(2)}',
-                          value: targetTemperature,
-                          min: 0,
-                          max: 80,
-                          onChanged: (value) {
-                            setState(() {
-                              targetTemperature = value;
-                              _temperatureController.text = targetTemperature.toStringAsFixed(2);
-                            });
-                          },
-                        ),
-                        TextField(
-                          controller: _temperatureController,
-                          decoration: InputDecoration(
-                            labelText: 'Set Temp Value',
-                            border: OutlineInputBorder(),
-                          ),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 80) {
-                              setState(() {
-                                targetTemperature = newValue;
-                                _databaseReference.child('set_temp').set(targetTemperature);
-                              });
-                            }
-                          },
-                        ),
-                        ElevatedButton(
-                          onPressed: _setTargetTemperature,
-                          child: Text('Set Temp'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text('UV Status: ${uvIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                        ElevatedButton(
-                          onPressed: _toggleUV,
-                          child: Text(uvIsOn ? 'Set UV Off' : 'Set UV On'),
-                        ),
-                        Text('LED Status: ${ledIsOn ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
-                        ElevatedButton(
-                          onPressed: _toggleLED,
-                          child: Text(ledIsOn ? 'Set LED Off' : 'Set LED On'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              _buildControlPanel(),
             ],
           ),
         ),
@@ -437,19 +357,31 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildDropdown() {
-    return DropdownButton<String>(
-      value: selectedTemp,
-      onChanged: (String? newValue) {
-        setState(() {
-          selectedTemp = newValue!;
-        });
-      },
-      items: tempKeys.map<DropdownMenuItem<String>>((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value),
-        );
-      }).toList(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Select Temperature Data:',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          DropdownButton<String>(
+            value: selectedTemp,
+            onChanged: (String? newValue) {
+              setState(() {
+                selectedTemp = newValue!;
+              });
+            },
+            items: tempKeys.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -459,21 +391,220 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Container(
       height: 400,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: true),
-          borderData: FlBorderData(show: true),
-          lineBarsData: [
-            LineChartBarData(
-              spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
-              isCurved: true,
-              color: Colors.red,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
+      padding: EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 5.0,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            selectedTemp == 'temp1' ? 'Daily Temperature Chart' : 'Weekly Temperature Chart',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 10),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(show: true),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) => Text('${value.toInt()}°C'),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) => Text('${value.toInt()}h'),
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: true),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
+                    isCurved: true,
+                    color: Colors.red,
+                    dotData: FlDotData(show: false),
+                    belowBarData: BarAreaData(show: true, color: Colors.red.withOpacity(0.3)),
+                  ),
+                ],
+                minY: 60,
+                maxY: 200,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlPanel() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _buildMotorControl(),
+                SizedBox(height: 20),
+                _buildTemperatureControl(),
+              ],
+            ),
+          ),
+          SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              children: [
+                _buildToggleControl('UV Light', uvIsOn, _toggleUV, Icons.lightbulb_outline),
+                SizedBox(height: 20),
+                _buildToggleControl('LED Light', ledIsOn, _toggleLED, Icons.lightbulb_outline),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMotorControl() {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 5.0,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Motor RPM Control', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 10),
+          TextField(
+            controller: _motorRpmController,
+            decoration: InputDecoration(
+              labelText: 'Set RPM Value',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              double? newValue = double.tryParse(value);
+              if (newValue != null && newValue >= 0 && newValue <= 3000) {
+                setState(() {
+                  motorRpm = newValue;
+                  _databaseReference.child('RT_RPM').set(motorRpm);
+                });
+              }
+            },
+          ),
+          SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: _setMotorRpm,
+            child: Text('Set RPM'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTemperatureControl() {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 5.0,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Temperature Control', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 10),
+          TextField(
+            controller: _temperatureController,
+            decoration: InputDecoration(
+              labelText: 'Set Temp Value',
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (value) {
+              double? newValue = double.tryParse(value);
+              if (newValue != null && newValue >= 0 && newValue <= 80) {
+                setState(() {
+                  targetTemperature = newValue;
+                  _databaseReference.child('set_temp').set(targetTemperature);
+                });
+              }
+            },
+          ),
+          SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: _setTargetTemperature,
+            child: Text('Set Temp'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleControl(String label, bool isOn, VoidCallback toggleFunction, IconData icon) {
+    return Container(
+      padding: EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 5.0,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label Control', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Status: ${isOn ? "On" : "Off"}', style: TextStyle(fontSize: 16)),
+              IconButton(
+                icon: Icon(icon, color: isOn ? Colors.green : Colors.grey),
+                onPressed: toggleFunction,
+              ),
+            ],
+          ),
+          ElevatedButton(
+            onPressed: toggleFunction,
+            child: Text(isOn ? 'Turn Off' : 'Turn On'),
+          ),
+        ],
       ),
     );
   }
@@ -486,9 +617,10 @@ class _HomeScreenState extends State<HomeScreen> {
             (route) => false,
       );
     } catch (e) {
-      print("Logout error :$e");
+      print("로그아웃 에러 :$e");
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그아웃 실패')),
       );
     }
   }
 }
+

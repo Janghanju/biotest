@@ -4,7 +4,7 @@ class DataItem extends StatelessWidget {
   final Map<String, dynamic> data;
   final String dataKey;
 
-  const DataItem({Key? key, required this.data, required this.dataKey}) : super(key: key);
+  const DataItem({Key? key, required this.data, required this.dataKey, required Icon icon}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
