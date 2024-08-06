@@ -15,6 +15,10 @@
 	<key>CFBundleName</key>
 	<string>biotest</string>
 	<key>CFBundlePackageType</key>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+    <string>블루투스를 사용하기 위한 설명이 필요합니다.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>위치 정보 접근 권한이 필요합니다.</string>
 	<string>APPL</string>
 	<key>NSCameraUsageDescription</key>
     <string>앱에서 카메라를 사용하기 위해 필요한 권한입니다.</string>

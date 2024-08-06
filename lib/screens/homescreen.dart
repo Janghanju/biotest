@@ -303,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
+              leading: Icon(Icons.device_hub),
               title: Text('Device'),
               onTap: () {
                 Navigator.pop(context);
@@ -314,7 +314,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
+              leading: Icon(Icons.logout),
               title: Text('Logout'),
               onTap: () {
                 Navigator.pop(context);
