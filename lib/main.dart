@@ -1,3 +1,4 @@
+import 'package:biotest/screens/SettingsScreen.dart';
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
 import 'screens/homescreen.dart';
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/signIn': (context) => SignInScreen(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor'),
         '/getItem': (context) => DeviceAddPage(),
+        '/settings' : (context) => SettingsScreen(),
       },
     );
   }
