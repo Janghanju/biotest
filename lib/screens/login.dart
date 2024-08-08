@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -21,8 +22,18 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        // 로그인 성공
-        Navigator.pushReplacementNamed(context, '/home');
+        // Firestore에서 사용자 데이터 조회
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        // 로그인 성공 후 홈 화면으로 이동
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: userData.data(),
+        );
       }
     } on FirebaseAuthException catch (e) {
       setState(() {

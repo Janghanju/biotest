@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignInScreen extends StatefulWidget {
   @override
@@ -11,6 +12,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController(); // 사용자 이름 입력 필드 추가
   String _errorMessage = '';
 
   Future<void> _register() async {
@@ -29,6 +31,13 @@ class _SignInScreenState extends State<SignInScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
+        // Firestore에 사용자 데이터 저장
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text.trim()
+        });
+
         // 회원가입 성공 시 로그인 화면으로 전환
         Navigator.pushReplacementNamed(context, '/login');
       }
@@ -59,6 +68,10 @@ class _SignInScreenState extends State<SignInScreen> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: 'Name'), // 사용자 이름 입력 필드
+            ),
             TextField(
               controller: _emailController,
               decoration: InputDecoration(labelText: 'Email'),
@@ -91,3 +104,4 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 }
+
