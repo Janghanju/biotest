@@ -10,6 +10,10 @@ import 'package:fl_chart/fl_chart.dart';
 import '../services/firebase_service.dart';
 import '../services/notification.dart';
 import '../widgets/dataitem.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../widgets/control_slider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -74,6 +78,37 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     });
+
+    //FCM message build
+    Future<void> sendPushMessage(String token, String messageTitle, String messageBody) async {
+      final response = await http.post(
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Authorization': 'key=SERVER_KEY', // Firebase 프로젝트의 서버 키
+        },
+        body: jsonEncode(
+          <String, dynamic>{
+            'to': token,
+            'notification': {
+              'title': messageTitle,
+              'body': messageBody,
+            },
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        print("서버 커넥션 성공");
+      } else {
+        print("서버 커넥션 실패");
+      }
+    }
+
+    FirebaseMessaging.instance.getToken().then((token) {
+      // 서버나 데이터베이스에 토큰을 저장하여 나중에 사용
+    });
+
 
     // RTSP 스트림 URL로 비디오 플레이어 초기화
     _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
