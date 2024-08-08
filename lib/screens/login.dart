@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: Text('로그인'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -64,17 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: '이메일'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: '비밀번호'),
               obscureText: true,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _login,
-              child: Text('Login'),
+              child: Text('로그인'),
             ),
             if (_errorMessage.isNotEmpty) ...[
               SizedBox(height: 20),
@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () {
                 Navigator.pushNamed(context, '/signIn');
               },
-              child: Text('Sign Up'),
+              child: Text('회원가입'),
             ),
           ],
         ),

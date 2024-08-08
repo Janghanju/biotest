@@ -62,7 +62,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up'),
+        title: Text('회원가입'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -70,26 +70,26 @@ class _SignInScreenState extends State<SignInScreen> {
           children: [
             TextField(
               controller: _nameController,
-              decoration: InputDecoration(labelText: 'Name'), // 사용자 이름 입력 필드
+              decoration: InputDecoration(labelText: '이름'), // 사용자 이름 입력 필드
             ),
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: '이메일'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: '비밀번호'),
               obscureText: true,
             ),
             TextField(
               controller: _confirmPasswordController,
-              decoration: InputDecoration(labelText: 'Confirm Password'),
+              decoration: InputDecoration(labelText: '비밀번호 확인'),
               obscureText: true,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _register,
-              child: Text('Sign Up'),
+              child: Text('회원가입'),
             ),
             if (_errorMessage.isNotEmpty) ...[
               SizedBox(height: 20),
