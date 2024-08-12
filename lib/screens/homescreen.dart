@@ -1,31 +1,36 @@
-import 'dart:developer';
-import 'package:biotest/screens/SettingsScreen.dart';
-import 'package:biotest/screens/getItem.dart';
-import 'package:biotest/screens/login.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_database/firebase_database.dart';
-import 'package:video_player/video_player.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../services/firebase_service.dart';
-import '../services/notification.dart';
-import '../widgets/dataitem.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:video_player/video_player.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
 import '../widgets/control_slider.dart';
+import '../widgets/dataitem.dart';
+import 'BluetoothDeviceManager.dart';
+import 'SettingsScreen.dart';
+import 'deviceStorage.dart';
+import 'getItem.dart';
+import 'login.dart';
 
-class HomeScreen extends StatefulWidget {
+
+// HomeScreen 클래스는 블루투스 장치와의 상호작용을 처리하는 화면
+class homeScreen extends StatefulWidget {
   final String title;
+  final BluetoothDeviceManager deviceManager;
+  final DeviceStorage deviceStorage;
 
-  const HomeScreen({Key? key, required this.title}) : super(key: key);
+  const homeScreen({Key? key, required this.title, required this.deviceManager, required this.deviceStorage}) : super(key: key);
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<homeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {}; // 데이터 저장을 위한 맵
   List<List<FlSpot>> tempSpots = List.generate(14, (_) => <FlSpot>[]); // 온도 및 RPM 데이터를 저장할 리스트
@@ -659,3 +664,4 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 enum DeviceStatus { online, offline } // 기기 상태 열거형
+
