@@ -1,24 +1,29 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_database/firebase_database.dart';
 
-// DeviceStorage는 로컬에 기기 정보를 저장하고 불러오는 클래스
 class DeviceStorage {
-  static const String deviceIdKey = 'deviceId';
-  static const String deviceNameKey = 'deviceName';
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref().child('devices');
 
-  // 기기 정보 저장
-  Future<void> saveDeviceInfo(String deviceId, String deviceName) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(deviceIdKey, deviceId);
-    await prefs.setString(deviceNameKey, deviceName);
+  Future<void> saveDeviceInfo(String userId, String deviceId, String deviceName) async {
+    try {
+      await _dbRef.child(userId).set({
+        'deviceId': deviceId,
+        'deviceName': deviceName,
+      });
+    } catch (e) {
+      print('Error saving device info: $e');
+    }
   }
 
-  // 기기 정보 로드
-  Future<Map<String, String?>> loadDeviceInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    return {
-      'deviceId': prefs.getString(deviceIdKey),
-      'deviceName': prefs.getString(deviceNameKey),
-    };
+  Future<Map<String, String?>> loadDeviceInfo(String userId) async {
+    try {
+      DataSnapshot snapshot = await _dbRef.child(userId).get();
+      if (snapshot.exists) {
+        return Map<String, String>.from(snapshot.value as Map);
+      }
+    } catch (e) {
+      print('Error loading device info: $e');
+    }
+    return {'deviceId': null, 'deviceName': null};
   }
 }
 
