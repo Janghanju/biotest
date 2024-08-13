@@ -27,6 +27,10 @@
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Bluetooth is required for device communication.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Location is required for Bluetooth scanning.</string>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
