@@ -1,6 +1,6 @@
 import 'package:biotest/screens/BluetoothDeviceManager.dart';
 import 'package:biotest/screens/SettingsScreen.dart';
-import 'package:biotest/screens/deviceStorage.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'services/firebase_service.dart';
 import 'screens/homescreen.dart';
@@ -8,13 +8,9 @@ import 'screens/login.dart';
 import 'screens/signin.dart';
 import 'screens/getItem.dart';
 
-// Create instances of BluetoothDeviceManager and DeviceStorage
-final BluetoothDeviceManager deviceManager = BluetoothDeviceManager();
-final DeviceStorage deviceStorage = DeviceStorage();
-
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseService.initializeFirebase();
+  WidgetsFlutterBinding.ensureInitialized(); // Ensures that widget binding is initialized before using it
+  await Firebase.initializeApp(); // Initializes Firebase
   runApp(MyApp());
 }
 
@@ -31,11 +27,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => LoginScreen(),
         '/signIn': (context) => SignInScreen(),
-        '/home': (context) => homeScreen(
-          title: 'Bio-reactor',
-          deviceManager: deviceManager,
-          deviceStorage: deviceStorage,
-        ),
+        '/home': (context) => HomeScreen(title: 'Bio-reactor'),
         '/getItem': (context) => DeviceAddPage(),
         '/settings': (context) => SettingsScreen(),
       },
