@@ -1,16 +1,22 @@
-import 'dart:developer';
-import 'package:biotest/screens/SettingsScreen.dart';
-import 'package:biotest/screens/getItem.dart';
-import 'package:biotest/screens/login.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:video_player/video_player.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/firebase_service.dart';
-import '../services/notification.dart';
-import '../widgets/dataitem.dart';
+import 'package:http/http.dart' as http;
 import '../widgets/control_slider.dart';
+import '../widgets/dataitem.dart';
+import 'BluetoothDeviceManager.dart';
+import 'SettingsScreen.dart';
+import 'deviceStorage.dart';
+import 'getItem.dart';
+import 'login.dart';
+//import 'register.dart'; // Import the new registration widget
 
 class HomeScreen extends StatefulWidget {
   final String title;

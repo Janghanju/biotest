@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -21,8 +23,18 @@ class _LoginScreenState extends State<LoginScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
-        // 로그인 성공
-        Navigator.pushReplacementNamed(context, '/home');
+        // Firestore에서 사용자 데이터 조회
+        DocumentSnapshot userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        // 로그인 성공 후 홈 화면으로 이동
+        Navigator.pushReplacementNamed(
+          context,
+          '/home',
+          arguments: userData.data(),
+        );
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -45,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login'),
+        title: Text('로그인'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
@@ -53,17 +65,17 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: '이메일'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: '비밀번호'),
               obscureText: true,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _login,
-              child: Text('Login'),
+              child: Text('로그인'),
             ),
             if (_errorMessage.isNotEmpty) ...[
               SizedBox(height: 20),
@@ -77,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
               onPressed: () {
                 Navigator.pushNamed(context, '/signIn');
               },
-              child: Text('Sign Up'),
+              child: Text('회원가입'),
             ),
           ],
         ),

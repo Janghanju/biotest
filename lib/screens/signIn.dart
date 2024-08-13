@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignInScreen extends StatefulWidget {
   @override
@@ -11,6 +13,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController(); // 사용자 이름 입력 필드 추가
   String _errorMessage = '';
 
   Future<void> _register() async {
@@ -29,6 +32,13 @@ class _SignInScreenState extends State<SignInScreen> {
       User? user = userCredential.user;
 
       if (user != null) {
+        // Firestore에 사용자 데이터 저장
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text.trim()
+        });
+
         // 회원가입 성공 시 로그인 화면으로 전환
         Navigator.pushReplacementNamed(context, '/login');
       }
@@ -53,30 +63,34 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up'),
+        title: Text('회원가입'),
       ),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
             TextField(
+              controller: _nameController,
+              decoration: InputDecoration(labelText: '이름'), // 사용자 이름 입력 필드
+            ),
+            TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: '이메일'),
             ),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: '비밀번호'),
               obscureText: true,
             ),
             TextField(
               controller: _confirmPasswordController,
-              decoration: InputDecoration(labelText: 'Confirm Password'),
+              decoration: InputDecoration(labelText: '비밀번호 확인'),
               obscureText: true,
             ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _register,
-              child: Text('Sign Up'),
+              child: Text('회원가입'),
             ),
             if (_errorMessage.isNotEmpty) ...[
               SizedBox(height: 20),
