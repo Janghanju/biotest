@@ -16,7 +16,7 @@ import 'SettingsScreen.dart';
 import 'deviceStorage.dart';
 import 'getItem.dart';
 import 'login.dart';
-
+import 'register.dart'; // Import the new registration widget
 
 // HomeScreen 클래스는 블루투스 장치와의 상호작용을 처리하는 화면
 class homeScreen extends StatefulWidget {
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<homeScreen> {
             title: Text('Device'),
             onTap: () {
               Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (context) => DeviceAddPage())); // 기기 추가 화면으로 이동
+              Navigator.push(context, MaterialPageRoute(builder: (context) => BluetoothDeviceRegistration(deviceManager: widget.deviceManager))); // 블루투스 기기 등록 화면으로 이동
             },
           ),
           ListTile(
@@ -663,5 +663,6 @@ class _HomeScreenState extends State<homeScreen> {
   }
 }
 
-enum DeviceStatus { online, offline } // 기기 상태 열거형
+enum DeviceStatus { online, offline }
+
 

@@ -33,8 +33,8 @@ class MyApp extends StatelessWidget {
         '/signIn': (context) => SignInScreen(),
         '/home': (context) => homeScreen(
           title: 'Bio-reactor',
-          deviceManager: deviceManager, // Pass the instance here
-          deviceStorage: deviceStorage, // Pass the instance here
+          deviceManager: deviceManager,
+          deviceStorage: deviceStorage,
         ),
         '/getItem': (context) => DeviceAddPage(),
         '/settings': (context) => SettingsScreen(),
