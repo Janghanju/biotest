@@ -1,4 +1,5 @@
 import 'package:biotest/screens/BluetoothDeviceManager.dart';
+import 'package:biotest/screens/Serial.dart';
 import 'package:biotest/screens/SettingsScreen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomeScreen(title: 'Bio-reactor'),
         '/getItem': (context) => DeviceAddPage(),
         '/settings': (context) => SettingsScreen(),
+        '/serial': (context) => BluetoothSerialCommunication(),
       },
     );
   }

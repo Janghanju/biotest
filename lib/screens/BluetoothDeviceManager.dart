@@ -140,6 +140,7 @@ class _BluetoothDeviceRegistrationState
     }
   }
 
+
   // Firestore에서 저장된 기기 UUID를 불러오는 메소드
   Future<List<String>> loadDeviceUuids() async {
     try {

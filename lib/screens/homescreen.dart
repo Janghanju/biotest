@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import '../widgets/control_slider.dart';
 import '../widgets/dataitem.dart';
 import 'BluetoothDeviceManager.dart';
+import 'Serial.dart';
 import 'SettingsScreen.dart';
 import 'login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -303,6 +304,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => BluetoothDeviceRegistration()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.device_hub),
+            title: Text('Serial'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => BluetoothSerialCommunication()));
             },
           ),
           ListTile(
