@@ -21,34 +21,50 @@ class _BluetoothDeviceRegistrationState
   void initState() {
     super.initState();
     loadDeviceUuids().then((uuids) {
-      autoConnectDevices(uuids); // 저장된 UUID로 자동 연결 시도
+      if (mounted) {
+        autoConnectDevices(uuids); // 저장된 UUID로 자동 연결 시도
+      }
     });
     startScan(); // 새로운 기기를 찾기 위해 스캔 시작
+  }
+
+  @override
+  void dispose() {
+    flutterBlue.stopScan(); // 스캔 중지
+    super.dispose();
   }
 
   // 기기 스캔을 시작하는 메소드
   void startScan() {
     if (!isScanning) { // 스캔 중복 방지
-      setState(() {
-        isScanning = true;
-      });
+      if (mounted) {
+        setState(() {
+          isScanning = true;
+        });
+      }
 
       // Stream<List<ScanResult>>에 대해 listen을 사용하여 스캔 결과 처리
       flutterBlue.scanResults.listen((results) {
-        setState(() {
-          scanResults = results; // 스캔 결과 업데이트
-        });
+        if (mounted) {
+          setState(() {
+            scanResults = results; // 스캔 결과 업데이트
+          });
+        }
       });
 
       flutterBlue.startScan(timeout: Duration(seconds: 5)).then((value) {
-        setState(() {
-          isScanning = false; // 스캔 종료
-        });
+        if (mounted) {
+          setState(() {
+            isScanning = false; // 스캔 종료
+          });
+        }
       }).catchError((error) {
         print("Scan error: $error");
-        setState(() {
-          isScanning = false;
-        });
+        if (mounted) {
+          setState(() {
+            isScanning = false;
+          });
+        }
       });
     }
   }
@@ -67,16 +83,20 @@ class _BluetoothDeviceRegistrationState
             .set({'uuid': device.id.toString(), 'name': device.name});
 
         // 기기 등록 성공 메시지
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Device ${device.name} registered successfully')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Device ${device.name} registered successfully')),
+          );
+        }
       }
     } catch (e) {
       print("Device registration error: $e");
       // 등록 오류 메시지
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to register device')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to register device')),
+        );
+      }
     }
   }
 
