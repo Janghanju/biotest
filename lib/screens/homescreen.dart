@@ -14,7 +14,7 @@ import '../widgets/dataitem.dart';
 import 'BluetoothDeviceManager.dart';
 import 'SettingsScreen.dart';
 import 'login.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -52,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _fcmToken;
 
   String selectedTemp = 'RT_Temp';
-  final List<String> tempKeys = [
+  String? selectedDeviceId;
+  String? selectedDeviceName;
+  List<String> tempKeys = [
     'RT_Temp',
     'RT_RPM',
     'PH',
@@ -72,12 +74,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _motorRpmController = TextEditingController();
   final TextEditingController _temperatureController2 = TextEditingController();
   final TextEditingController _motorRpmController2 = TextEditingController();
+  List<Map<String, String>> registeredDevices = [];
 
   @override
   void initState() {
     super.initState();
     _initializeFirebase();
     _initializeVideoPlayer();
+    loadRegisteredDevices();
   }
 
   Future<void> _initializeFirebase() async {
@@ -114,6 +118,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void loadRegisteredDevices() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('devices')
+          .get();
+
+      List<Map<String, String>> devices = [];
+      for (var doc in snapshot.docs) {
+        devices.add({
+          'uuid': doc['uuid'],
+          'name': doc['name'],
+        });
+      }
+
+      setState(() {
+        registeredDevices = devices;
+        if (registeredDevices.isNotEmpty) {
+          selectedDeviceId = registeredDevices.first['uuid'];
+          selectedDeviceName = registeredDevices.first['name'];
+        }
+      });
+    }
+  }
 
   void _updateAllValues() {
     rtRPM = double.tryParse(_data['RT_RPM']?.toString() ?? '0.0') ?? 0.0;
@@ -188,51 +218,52 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       drawer: _buildDrawer(context),
-      body: StreamBuilder(
-        stream: _databaseReference.onValue,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || !snapshot.data!.snapshot.exists) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          final data = Map<String, dynamic>.from(
-              snapshot.data!.snapshot.value as Map<dynamic, dynamic>? ?? {});
-          final device1Status = data['device1']?['status'] as bool? ?? false;
-          final device2Status = data['device2']?['status'] as bool? ?? false;
-
-          return Column(
-            children: [
-              Expanded(
-                child: Card(
-                  color: _getReactorColor(device1Status, device2Status),
-                  child: Center(
-                    child: Text(
-                      'Device 1: ${device1Status ? "Online" : "Offline"}\nDevice 2: ${device2Status ? "Online" : "Offline"}',
-                      style: TextStyle(fontSize: 24, color: Colors.white),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ),
-              _buildMainContent(context),
-            ],
-          );
-        },
+      body: registeredDevices.isEmpty
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          _buildDeviceDropdown(),
+          Expanded(
+            child: Column(
+              children: [
+                _buildDeviceStatusCard(),
+                _buildMainContent(context),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Color _getReactorColor(bool device1Status, bool device2Status) {
-    if (device1Status && device2Status) {
-      return Colors.green;
-    } else if (device1Status || device2Status) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
+  Widget _buildDeviceDropdown() {
+    return DropdownButton<String>(
+      value: selectedDeviceId,
+      onChanged: (String? newDeviceId) {
+        setState(() {
+          selectedDeviceId = newDeviceId;
+          selectedDeviceName = registeredDevices
+              .firstWhere((device) => device['uuid'] == newDeviceId)['name'];
+        });
+        // 기기 변경 시 추가로 할 작업이 있으면 여기에 작성
+      },
+      items: registeredDevices.map<DropdownMenuItem<String>>((device) {
+        return DropdownMenuItem<String>(
+          value: device['uuid'],
+          child: Text(device['name']!),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDeviceStatusCard() {
+    return Card(
+      color: Colors.blueAccent,
+      child: ListTile(
+        title: Text('Selected Device: $selectedDeviceName'),
+        subtitle: Text('UUID: $selectedDeviceId'),
+      ),
+    );
   }
 
   Widget _buildDrawer(BuildContext context) {
@@ -459,7 +490,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: (value) {
                   setState(() {
                     userSetRPM2 = value;
-                    _motorRpmController2.text = userSetRPM2.toStringAsFixed(1);
+                    _motorRpmController2.text =
+                        userSetRPM2.toStringAsFixed(1);
                   });
                 },
               ),
