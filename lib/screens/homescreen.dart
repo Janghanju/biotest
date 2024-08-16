@@ -3,7 +3,6 @@ import 'package:flutter_blue/flutter_blue.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:video_player/video_player.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../widgets/control_slider.dart';
 import '../widgets/dataitem.dart';
@@ -42,11 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
   double userSetRPM2 = 0.0;
   double userSetTemp = 0.0;
   double userSetTemp2 = 0.0;
-  //PH, DO가 추가되어야함
   bool UV = false;
   bool LED = false;
 
-  late VideoPlayerController _videoPlayerController;
   String? _fcmToken;
 
   String selectedTemp = 'RT_Temp';
@@ -78,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initializeFirebase();
-    _initializeVideoPlayer();
     loadRegisteredDevices();
   }
 
@@ -89,18 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
       print('FCM Token: $_fcmToken');
     });
     _initializeDataListeners();
-  }
-
-  void _initializeVideoPlayer() {
-    _videoPlayerController = VideoPlayerController.network(
-      "http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8",
-    )
-      ..initialize().then((_) {
-        setState(() {});
-        _videoPlayerController.play();
-      }).catchError((error) {
-        print('Video Player Initialization Error: $error');
-      });
   }
 
   void _initializeDataListeners() {
@@ -194,7 +178,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _videoPlayerController.dispose();
     _temperatureController.dispose();
     _motorRpmController.dispose();
     _temperatureController2.dispose();
@@ -222,12 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _buildDeviceDropdown(),
           Expanded(
-            child: Column(
-              children: [
-                _buildDeviceStatusCard(),
-                _buildMainContent(context),
-              ],
-            ),
+            child: _buildMainContent(context),
           ),
         ],
       ),
@@ -243,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedDeviceName = registeredDevices
               .firstWhere((device) => device['uuid'] == newDeviceId)['name'];
         });
-        // 기기 변경 시 추가로 할 작업이 있으면 여기에 작성
       },
       items: registeredDevices.map<DropdownMenuItem<String>>((device) {
         return DropdownMenuItem<String>(
@@ -332,12 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          AspectRatio(
-            aspectRatio: _videoPlayerController.value.aspectRatio,
-            child: _videoPlayerController.value.isInitialized
-                ? VideoPlayer(_videoPlayerController)
-                : Center(child: CircularProgressIndicator()),
-          ),
           _buildDataItems(),
           SizedBox(height: 20),
           _buildDropdown(),
@@ -706,5 +677,3 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 }
-
-enum DeviceStatus { online, offline }
