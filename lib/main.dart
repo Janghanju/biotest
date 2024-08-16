@@ -10,8 +10,8 @@ import 'screens/signin.dart';
 import 'screens/getItem.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Ensures that widget binding is initialized before using it
-  await Firebase.initializeApp(); // Initializes Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(MyApp());
 }
 
@@ -36,5 +36,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-

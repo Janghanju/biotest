@@ -1,14 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:video_player/video_player.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:http/http.dart' as http;
 import '../widgets/control_slider.dart';
 import '../widgets/dataitem.dart';
 import 'BluetoothDeviceManager.dart';
@@ -46,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double userSetRPM2 = 0.0;
   double userSetTemp = 0.0;
   double userSetTemp2 = 0.0;
+  //PH, DO가 추가되어야함
   bool UV = false;
   bool LED = false;
 
