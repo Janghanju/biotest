@@ -36,6 +36,7 @@ class _BluetoothSerialCommunicationState extends State<BluetoothSerialCommunicat
     connectedDevice?.disconnect();
     super.dispose();
   }
+  //일단 저장된 기기가 인식이 안되는 문제가 발생하여 다른 방법을 고민해봐야할 것 같음
 
   // Firestore에서 등록된 기기 정보를 불러오기
   Future<void> loadRegisteredDevices() async {
