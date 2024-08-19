@@ -77,61 +77,21 @@ class _BluetoothDeviceRegistrationState
   }
 
   Future<void> registerDevice(BluetoothDevice device) async {
-    TextEditingController ssidController = TextEditingController();
-    TextEditingController passwordController = TextEditingController();
+    await _saveDeviceData(
+        device,
+        1500.0, // rtRPM 값
+        true, // LED 값
+        7.0, // PH 값
+        25.0, // RT_Temp 값
+        5, // heatPow 값
+        75.0, // heatTemp 값
+        22.0, // inTemp 값
+        20.0, // outTemp 값
+        DateTime.now().millisecondsSinceEpoch // timestamp 값
+    );
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Enter Wi-Fi Credentials'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: ssidController,
-                decoration: InputDecoration(labelText: 'Wi-Fi SSID'),
-              ),
-              TextField(
-                controller: passwordController,
-                decoration: InputDecoration(labelText: 'Wi-Fi Password'),
-                obscureText: true,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (ssidController.text.isNotEmpty &&
-                    passwordController.text.isNotEmpty) {
-                  await _saveDeviceData(
-                      device,
-                      double.parse(ssidController.text), // rtRPM 값
-                      true, // LED 값
-                      7.0, // PH 값
-                      25.0, // RT_Temp 값
-                      5, // heatPow 값
-                      75.0, // heatTemp 값
-                      22.0, // inTemp 값
-                      20.0, // outTemp 값
-                      DateTime.now().millisecondsSinceEpoch // timestamp 값
-                  );
-                  Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Please enter valid credentials')),
-                  );
-                }
-              },
-              child: Text('Register'),
-            ),
-          ],
-        );
-      },
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Device ${device.name} registered successfully')),
     );
   }
 

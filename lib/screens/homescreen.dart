@@ -114,8 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
       List<Map<String, String>> devices = [];
       for (var doc in snapshot.docs) {
         devices.add({
-          'uuid': doc['uuid'],
-          'name': doc['name'],
+          'uuid': doc['uuid']
         });
       }
 
@@ -123,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
         registeredDevices = devices;
         if (registeredDevices.isNotEmpty) {
           selectedDeviceId = registeredDevices.first['uuid'];
-          selectedDeviceName = registeredDevices.first['name'];
           _initializeDataListeners(); // 선택된 기기에 대한 데이터 리스너 초기화
         }
       });
@@ -226,14 +224,14 @@ class _HomeScreenState extends State<HomeScreen> {
           _initializeDataListeners(); // 선택된 기기 변경 시 데이터 리스너 초기화
         });
       },
-      items: registeredDevices.map<DropdownMenuItem<String>>((device) {
+      items: registeredDevices.isEmpty
+          ? []
+          : registeredDevices.map<DropdownMenuItem<String>>((device) {
         return DropdownMenuItem<String>(
           value: device['uuid'],
           child: Row(
             children: [
-              Text(device['uuid']!), // UUID 표시
-              SizedBox(width: 4),    // 간격을 주기 위해 사용
-              Text(device['name']!), // 이름 표시
+              Text(device['uuid'] ?? 'Unknown UUID'), // UUID 표시
             ],
           ),
         );
@@ -287,7 +285,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => BluetoothDeviceRegistration()));
+                      builder: (context) =>
+                          BluetoothDeviceRegistration()));
             },
           ),
           ListTile(
@@ -298,7 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => BluetoothSerialCommunication()));
+                      builder: (context) =>
+                          BluetoothSerialCommunication()));
             },
           ),
           ListTile(
@@ -309,7 +309,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => DeviceRegistrationScreen()));
+                      builder: (context) =>
+                          DeviceRegistrationScreen()));
             },
           ),
           ListTile(
@@ -384,7 +385,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onChanged: (value) {
                   setState(() {
                     userSetRPM = value;
-                    _motorRpmController.text = userSetRPM.toStringAsFixed(1);
+                    _motorRpmController.text =
+                        userSetRPM.toStringAsFixed(1);
                   });
                 },
               ),
@@ -397,7 +399,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   double? newValue = double.tryParse(value);
-                  if (newValue != null && newValue >= 0 && newValue <= 3000) {
+                  if (newValue != null &&
+                      newValue >= 0 &&
+                      newValue <= 3000) {
                     setState(() {
                       userSetRPM = newValue;
                     });
@@ -438,7 +442,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   double? newValue = double.tryParse(value);
-                  if (newValue != null && newValue >= 0 && newValue <= 80) {
+                  if (newValue != null &&
+                      newValue >= 0 &&
+                      newValue <= 80) {
                     setState(() {
                       userSetTemp = newValue;
                     });
@@ -505,7 +511,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   double? newValue2 = double.tryParse(value);
-                  if (newValue2 != null && newValue2 >= 0 && newValue2 <= 3000) {
+                  if (newValue2 != null &&
+                      newValue2 >= 0 &&
+                      newValue2 <= 3000) {
                     setState(() {
                       userSetRPM2 = newValue2;
                     });
@@ -546,7 +554,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
                   double? newValue2 = double.tryParse(value);
-                  if (newValue2 != null && newValue2 >= 0 && newValue2 <= 80) {
+                  if (newValue2 != null &&
+                      newValue2 >= 0 &&
+                      newValue2 <= 80) {
                     setState(() {
                       userSetTemp2 = newValue2;
                     });
@@ -671,7 +681,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _deviceReference?.child('set_RPM').set(userSetRPM);
         });
       } else {
-        _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+        _showInvalidInputSnackbar(
+            'Please enter a valid RPM between 0 and 3000.');
       }
     }
   }
@@ -685,7 +696,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _deviceReference?.child('set_RPM2').set(userSetRPM2);
         });
       } else {
-        _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+        _showInvalidInputSnackbar(
+            'Please enter a valid RPM between 0 and 3000.');
       }
     }
   }
