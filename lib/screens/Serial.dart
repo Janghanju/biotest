@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class DeviceScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -16,8 +17,8 @@ class DeviceScreen extends StatefulWidget {
 class _DeviceScreenState extends State<DeviceScreen> {
   String stateText = 'Connecting';
   String connectButtonText = 'Disconnect';
-  BluetoothDeviceState deviceState = BluetoothDeviceState.disconnected;
-  StreamSubscription<BluetoothDeviceState>? _stateListener;
+  BluetoothConnectionState deviceState = BluetoothConnectionState.disconnected;
+  StreamSubscription<BluetoothConnectionState>? _stateListener;
   List<BluetoothService> bluetoothService = [];
   Map<String, List<int>> notifyDatas = {};
   BluetoothCharacteristic? serialCharacteristic;
@@ -27,8 +28,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
   void initState() {
     super.initState();
     _stateListener = widget.device.state.listen((event) {
-      setBleConnectionState(event as BluetoothDeviceState);
-    }) as StreamSubscription<BluetoothDeviceState>?;
+      setBleConnectionState(event as BluetoothConnectionState);
+    }) as StreamSubscription<BluetoothConnectionState>?;
     connect();
   }
 
@@ -39,23 +40,23 @@ class _DeviceScreenState extends State<DeviceScreen> {
     super.dispose();
   }
 
-  void setBleConnectionState(BluetoothDeviceState event) {
+  void setBleConnectionState(BluetoothConnectionState event) {
     setState(() {
       deviceState = event;
       switch (event) {
-        case BluetoothDeviceState.disconnected:
+        case BluetoothConnectionState.disconnected:
           stateText = 'Disconnected';
           connectButtonText = 'Connect';
           break;
-        case BluetoothDeviceState.disconnecting:
-          stateText = 'Disconnecting';
-          break;
-        case BluetoothDeviceState.connected:
+        case BluetoothConnectionState.connected:
           stateText = 'Connected';
           connectButtonText = 'Disconnect';
           break;
-        case BluetoothDeviceState.connecting:
+        case BluetoothConnectionState.connecting:
           stateText = 'Connecting';
+          break;
+        case BluetoothConnectionState.disconnecting:
+          stateText = 'Disconnecting';
           break;
       }
     });
@@ -85,13 +86,19 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
           if (c.uuid.toString() == "0000ffe1-0000-1000-8000-00805f9b34fb") {
             serialCharacteristic = c;
-            startListening();
+            startListening(); // 시리얼 모니터 시작
           }
         }
       }
+
+      // 연결 성공 시 토스트 메시지 표시
+      Fluttertoast.showToast(msg: "Device connected successfully");
       return true;
     } catch (e) {
-      setBleConnectionState(BluetoothDeviceState.disconnected);
+      setBleConnectionState(BluetoothConnectionState.disconnected);
+
+      // 연결 실패 시 토스트 메시지 표시
+      Fluttertoast.showToast(msg: "Failed to connect to device: $e");
       return false;
     }
   }
@@ -99,8 +106,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
   void disconnect() {
     try {
       widget.device.disconnect();
+      Fluttertoast.showToast(msg: "Device disconnected");
     } catch (e) {
       print("Disconnect error: $e");
+      Fluttertoast.showToast(msg: "Error disconnecting device: $e");
     }
   }
 
@@ -250,6 +259,7 @@ class _BluetoothSerialCommunicationState
   String? selectedDeviceUUID;
   String? selectedDeviceName;
   List<String> logMessages = [];
+  StreamSubscription<List<ScanResult>>? scanSubscription;
 
   @override
   void initState() {
@@ -259,6 +269,7 @@ class _BluetoothSerialCommunicationState
 
   @override
   void dispose() {
+    scanSubscription?.cancel();
     FlutterBluePlus.stopScan();
     connectedDevice?.disconnect();
     super.dispose();
@@ -287,7 +298,6 @@ class _BluetoothSerialCommunicationState
           if (devices.isNotEmpty) {
             selectedDeviceUUID = devices.first['uuid'];
             selectedDeviceName = devices.first['name'];
-            connectToDevice();
           }
         });
       }
@@ -296,49 +306,77 @@ class _BluetoothSerialCommunicationState
 
   Future<void> connectToDevice() async {
     if (selectedDeviceUUID != null) {
+      scanSubscription?.cancel();
+      await FlutterBluePlus.stopScan();
       try {
-        await FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
-        FlutterBluePlus.scanResults.listen((results) async {
+        bool deviceFound = false;
+        await FlutterBluePlus.startScan(timeout: Duration(seconds: 10));
+
+        scanSubscription = FlutterBluePlus.scanResults.listen((results) async {
           for (ScanResult r in results) {
+            print("Scanned Device: ${r.device.id.toString()}");
+
+            // 선택한 UUID와 스캔된 기기 UUID가 일치하는지 확인
             if (r.device.id.toString() == selectedDeviceUUID) {
+              deviceFound = true;
               try {
                 await r.device.connect();
                 setState(() {
                   connectedDevice = r.device;
                 });
-                FlutterBluePlus.stopScan();
+                await FlutterBluePlus.stopScan();
+
+                // 연결 성공 시 시리얼 모니터 화면으로 전환
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        DeviceScreen(device: connectedDevice!),
+                    builder: (context) => DeviceScreen(device: connectedDevice!),
                   ),
                 );
+
+                Fluttertoast.showToast(msg: "Device connected successfully");
                 break;
               } catch (e) {
                 setState(() {
                   logMessages.add("Connection error: $e");
                 });
+                Fluttertoast.showToast(msg: "Failed to connect to device");
               }
             }
           }
         });
+
+        // 스캔이 완료된 후 기기를 찾지 못한 경우에 대한 처리
+        scanSubscription?.onDone(() {
+          if (!deviceFound) {
+            Fluttertoast.showToast(msg: "Device not found");
+          }
+        });
+
       } catch (e) {
         setState(() {
           logMessages.add("Scan start error: $e");
         });
+        Fluttertoast.showToast(msg: "Failed to start scan");
       }
+    } else {
+      Fluttertoast.showToast(msg: "No device selected");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("블루투스 기기 선택")),
-      body: connectedDevice == null ? buildDeviceSelectionView() : Container(),
+      appBar: AppBar(
+        title: Text("블루투스 기기 선택"),
+      ),
+      body: connectedDevice == null
+          ? buildDeviceSelectionView()
+          : Container(), // 기기 연결이 되어 있다면 빈 화면을 표시
     );
   }
 
+  // 기기 선택 화면을 빌드하는 위젯
   Widget buildDeviceSelectionView() {
     return Center(
       child: Column(
@@ -358,7 +396,7 @@ class _BluetoothSerialCommunicationState
             items: registeredDevices.map<DropdownMenuItem<String>>((device) {
               return DropdownMenuItem<String>(
                 value: device['uuid'],
-                child: Text('${device['name']} (${device['uuid']})'),
+                child: Text('${device['uuid']}'),
               );
             }).toList(),
           ),

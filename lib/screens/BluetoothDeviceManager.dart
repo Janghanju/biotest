@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:ffi';
+import 'dart:io';
+import 'package:csv/csv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothDeviceRegistration extends StatefulWidget {
@@ -42,8 +48,7 @@ class _BluetoothDeviceRegistrationState
       Permission.locationWhenInUse,
     ].request();
 
-    bool allGranted = statuses.values.every((status) => status.isGranted);
-    return allGranted;
+    return statuses.values.every((status) => status.isGranted);
   }
 
   void startScan() {
@@ -124,19 +129,35 @@ class _BluetoothDeviceRegistrationState
   }
 
   Future<void> _saveDeviceData(
-      BluetoothDevice device, String ssid, String password) async {
+      BluetoothDevice device,
+      double rtRPM,
+      bool LED,
+      double PH,
+      double RT_Temp,
+      int heatPow,
+      double heatTemp,
+      double inTemp,
+      double outTemp,
+      String password
+      ) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        String firestorePath = 'users/${user.uid}/devices/${device.id.toString()}';
-        String realtimeDBPath = 'devices/${device.id.toString()}';
+        String uuid = device.id.toString();
+        String firestorePath = 'users/${user.uid}/devices/$uuid';
+        String realtimeDBPath = 'devices/$uuid';
 
         Map<String, dynamic> deviceData = {
-          'uuid': device.id.toString(),
-          'name': device.name,
-          'wifi_ssid': ssid,
-          'wifi_password': password,
-          'timestamp': DateTime.now().millisecondsSinceEpoch, // 추가된 타임스탬프
+          'uuid': uuid,
+          'RT_RPM': rtRPM,
+          'LED': LED,
+          'PH': PH,
+          'RT_Temp': RT_Temp,
+          'temp/heatPow': heatPow,
+          'temp/heatTemp': heatTemp,
+          'temp/inTemp': inTemp,
+          'temp/outTemp': outTemp,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
         };
 
         // Firestore에 저장
@@ -144,6 +165,9 @@ class _BluetoothDeviceRegistrationState
 
         // Realtime Database에 저장
         await FirebaseDatabase.instance.ref(realtimeDBPath).set(deviceData);
+
+        // CSV 파일 생성 및 Storage에 업로드
+        await _createAndUploadCSVFile(deviceData);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Device ${device.name} registered successfully')),
@@ -154,6 +178,47 @@ class _BluetoothDeviceRegistrationState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to register device')),
       );
+    }
+  }
+
+  Future<void> _createAndUploadCSVFile(Map<String, dynamic> deviceData) async {
+    try {
+      String uuid = deviceData['uuid'];
+      String fileName = '$uuid.csv';
+
+      // CSV 파일 내용 생성
+      List<List<dynamic>> rows = [
+        ['uuid', 'RT_RPM', 'LED', 'PH', 'RT_Temp', 'temp/heatPow', 'temp/heatTemp', 'temp/inTemp', 'temp/outTemp', 'timestamp'],
+        [
+          deviceData['uuid'],
+          deviceData['RT_RPM'],
+          deviceData['LED'],
+          deviceData['PH'],
+          deviceData['RT_Temp'],
+          deviceData['temp/heatPow'],
+          deviceData['temp/heatTemp'],
+          deviceData['temp/inTemp'],
+          deviceData['temp/outTemp'],
+          deviceData['timestamp']
+        ]
+      ];
+
+      String csvData = const ListToCsvConverter().convert(rows);
+
+      // 임시 디렉토리에 CSV 파일 생성
+      final directory = await getTemporaryDirectory();
+      final path = '${directory.path}/$fileName';
+      final file = File(path);
+      String csvContent = const ListToCsvConverter().convert(rows);
+      await file.writeAsString(csvContent);
+
+      // Firebase Storage에 업로드
+      final storageRef = FirebaseStorage.instance.ref().child('csv_files/$fileName');
+      await storageRef.putFile(file);
+
+      print('CSV file uploaded: $fileName');
+    } catch (e) {
+      print('Failed to create or upload CSV file: $e');
     }
   }
 
@@ -287,3 +352,4 @@ class _BluetoothDeviceRegistrationState
     );
   }
 }
+
