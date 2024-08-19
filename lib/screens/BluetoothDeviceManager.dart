@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothDeviceRegistration extends StatefulWidget {
@@ -127,14 +128,22 @@ class _BluetoothDeviceRegistrationState
     try {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        String userPath = 'users/${user.uid}/devices/${device.id.toString()}';
+        String firestorePath = 'users/${user.uid}/devices/${device.id.toString()}';
+        String realtimeDBPath = 'devices/${device.id.toString()}';
 
-        await FirebaseFirestore.instance.doc(userPath).set({
+        Map<String, dynamic> deviceData = {
           'uuid': device.id.toString(),
           'name': device.name,
           'wifi_ssid': ssid,
           'wifi_password': password,
-        });
+          'timestamp': DateTime.now().millisecondsSinceEpoch, // 추가된 타임스탬프
+        };
+
+        // Firestore에 저장
+        await FirebaseFirestore.instance.doc(firestorePath).set(deviceData);
+
+        // Realtime Database에 저장
+        await FirebaseDatabase.instance.ref(realtimeDBPath).set(deviceData);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Device ${device.name} registered successfully')),

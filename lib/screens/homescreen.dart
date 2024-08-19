@@ -7,6 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../widgets/control_slider.dart';
 import '../widgets/dataitem.dart';
 import 'BluetoothDeviceManager.dart';
+import 'CSVget.dart';
 import 'Serial.dart';
 import 'SettingsScreen.dart';
 import 'login.dart';
@@ -25,7 +26,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  late DatabaseReference _databaseReference;
+  DatabaseReference? _deviceReference;
   Map<String, dynamic> _data = {};
   List<List<FlSpot>> tempSpots = List.generate(14, (_) => <FlSpot>[]);
   double rtRPM = 0.0;
@@ -79,25 +80,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initializeFirebase() async {
-    _databaseReference = FirebaseDatabase.instance.ref();
     FirebaseMessaging.instance.getToken().then((token) {
       _fcmToken = token;
       print('FCM Token: $_fcmToken');
     });
-    _initializeDataListeners();
   }
 
   void _initializeDataListeners() {
-    _databaseReference.onValue.listen((event) {
-      final data = event.snapshot.value as Map<dynamic, dynamic>?;
-      if (data != null) {
-        setState(() {
-          _data = data.cast<String, dynamic>();
-          _updateAllValues();
-          _updateTempData();
-        });
-      }
-    });
+    if (selectedDeviceId != null) {
+      _deviceReference = FirebaseDatabase.instance.ref('devices/$selectedDeviceId');
+      _deviceReference?.onValue.listen((event) {
+        final data = event.snapshot.value as Map<dynamic, dynamic>?;
+        if (data != null) {
+          setState(() {
+            _data = data.cast<String, dynamic>();
+            _updateAllValues();
+            _updateTempData();
+          });
+        }
+      });
+    }
   }
 
   void loadRegisteredDevices() async {
@@ -122,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (registeredDevices.isNotEmpty) {
           selectedDeviceId = registeredDevices.first['uuid'];
           selectedDeviceName = registeredDevices.first['name'];
+          _initializeDataListeners(); // 선택된 기기에 대한 데이터 리스너 초기화
         }
       });
     }
@@ -220,12 +223,19 @@ class _HomeScreenState extends State<HomeScreen> {
           selectedDeviceId = newDeviceId;
           selectedDeviceName = registeredDevices
               .firstWhere((device) => device['uuid'] == newDeviceId)['name'];
+          _initializeDataListeners(); // 선택된 기기 변경 시 데이터 리스너 초기화
         });
       },
       items: registeredDevices.map<DropdownMenuItem<String>>((device) {
         return DropdownMenuItem<String>(
           value: device['uuid'],
-          child: Text(device['name']!),
+          child: Row(
+            children: [
+              Text(device['uuid']!), // UUID 표시
+              SizedBox(width: 4),    // 간격을 주기 위해 사용
+              Text(device['name']!), // 이름 표시
+            ],
+          ),
         );
       }).toList(),
     );
@@ -281,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           ListTile(
-            leading: Icon(Icons.device_hub),
+            leading: Icon(Icons.security_update),
             title: Text('Serial'),
             onTap: () {
               Navigator.pop(context);
@@ -289,6 +299,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => BluetoothSerialCommunication()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.add_chart_outlined),
+            title: Text('CSV파일 업로드'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => DeviceRegistrationScreen()));
             },
           ),
           ListTile(
@@ -594,66 +615,78 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _toggleUV() {
-    setState(() {
-      UV = !UV;
-      _databaseReference.child('UV').set(UV);
-    });
+    if (selectedDeviceId != null) {
+      setState(() {
+        UV = !UV;
+        _deviceReference?.child('UV').set(UV);
+      });
+    }
   }
 
   void _toggleLED() {
-    setState(() {
-      LED = !LED;
-      _databaseReference.child('LED').set(LED);
-    });
+    if (selectedDeviceId != null) {
+      setState(() {
+        LED = !LED;
+        _deviceReference?.child('LED').set(LED);
+      });
+    }
   }
 
   void _setTargetTemperature() {
-    double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
-    if (newTemp >= 0 && newTemp <= 80) {
-      setState(() {
-        userSetTemp = newTemp;
-        _databaseReference.child('set_Temp').set(userSetTemp);
-      });
-    } else {
-      _showInvalidInputSnackbar(
-          'Please enter a valid temperature between 0 and 80.');
+    if (selectedDeviceId != null) {
+      double newTemp = double.tryParse(_temperatureController.text) ?? 0.0;
+      if (newTemp >= 0 && newTemp <= 80) {
+        setState(() {
+          userSetTemp = newTemp;
+          _deviceReference?.child('set_Temp').set(userSetTemp);
+        });
+      } else {
+        _showInvalidInputSnackbar(
+            'Please enter a valid temperature between 0 and 80.');
+      }
     }
   }
 
   void _setTargetTemperature2() {
-    double newTemp2 = double.tryParse(_temperatureController2.text) ?? 0.0;
-    if (newTemp2 >= 0 && newTemp2 <= 80) {
-      setState(() {
-        userSetTemp2 = newTemp2;
-        _databaseReference.child('set_Temp2').set(userSetTemp2);
-      });
-    } else {
-      _showInvalidInputSnackbar(
-          'Please enter a valid temperature between 0 and 80.');
+    if (selectedDeviceId != null) {
+      double newTemp2 = double.tryParse(_temperatureController2.text) ?? 0.0;
+      if (newTemp2 >= 0 && newTemp2 <= 80) {
+        setState(() {
+          userSetTemp2 = newTemp2;
+          _deviceReference?.child('set_Temp2').set(userSetTemp2);
+        });
+      } else {
+        _showInvalidInputSnackbar(
+            'Please enter a valid temperature between 0 and 80.');
+      }
     }
   }
 
   void _setMotorRpm() {
-    double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
-    if (newRpm >= 0 && newRpm <= 3000) {
-      setState(() {
-        userSetRPM = newRpm;
-        _databaseReference.child('set_RPM').set(userSetRPM);
-      });
-    } else {
-      _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+    if (selectedDeviceId != null) {
+      double newRpm = double.tryParse(_motorRpmController.text) ?? 0.0;
+      if (newRpm >= 0 && newRpm <= 3000) {
+        setState(() {
+          userSetRPM = newRpm;
+          _deviceReference?.child('set_RPM').set(userSetRPM);
+        });
+      } else {
+        _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+      }
     }
   }
 
   void _setMotorRpm2() {
-    double newRpm2 = double.tryParse(_motorRpmController2.text) ?? 0.0;
-    if (newRpm2 >= 0 && newRpm2 <= 3000) {
-      setState(() {
-        userSetRPM2 = newRpm2;
-        _databaseReference.child('set_RPM2').set(userSetRPM2);
-      });
-    } else {
-      _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+    if (selectedDeviceId != null) {
+      double newRpm2 = double.tryParse(_motorRpmController2.text) ?? 0.0;
+      if (newRpm2 >= 0 && newRpm2 <= 3000) {
+        setState(() {
+          userSetRPM2 = newRpm2;
+          _deviceReference?.child('set_RPM2').set(userSetRPM2);
+        });
+      } else {
+        _showInvalidInputSnackbar('Please enter a valid RPM between 0 and 3000.');
+      }
     }
   }
 
@@ -677,3 +710,4 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 }
+
