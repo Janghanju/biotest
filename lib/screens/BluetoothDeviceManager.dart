@@ -109,9 +109,16 @@ class _BluetoothDeviceRegistrationState
                 if (ssidController.text.isNotEmpty &&
                     passwordController.text.isNotEmpty) {
                   await _saveDeviceData(
-                    device,
-                    ssidController.text,
-                    passwordController.text,
+                      device,
+                      double.parse(ssidController.text), // rtRPM 값
+                      true, // LED 값
+                      7.0, // PH 값
+                      25.0, // RT_Temp 값
+                      5, // heatPow 값
+                      75.0, // heatTemp 값
+                      22.0, // inTemp 값
+                      20.0, // outTemp 값
+                      DateTime.now().millisecondsSinceEpoch // timestamp 값
                   );
                   Navigator.pop(context);
                 } else {
@@ -138,7 +145,7 @@ class _BluetoothDeviceRegistrationState
       double heatTemp,
       double inTemp,
       double outTemp,
-      String password
+      int timestamp
       ) async {
     try {
       User? user = FirebaseAuth.instance.currentUser;
