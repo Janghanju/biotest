@@ -15,6 +15,7 @@ class BluetoothDeviceRegistration extends StatefulWidget {
 class _MyHomePageState extends State<BluetoothDeviceRegistration> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   bool _isScanning = false;
+
   BluetoothDevice? _connectedDevice;
   List<BluetoothDevice> deviceList = [];
   List<BluetoothService> _services = [];
@@ -72,16 +73,23 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     if (!_isScanning) {
       deviceList.clear(); // 기존 장치 리스트 초기화
       // 스캔 시작
-      await flutterBlue.startScan(timeout: Duration(seconds: 10));
+      await flutterBlue.startScan(timeout: Duration(seconds: 20));
 
       // 스캔 결과 구독
       flutterBlue.scanResults.listen((scanResults) {
         for (ScanResult scanResult in scanResults) {
           var device = scanResult.device;
+          var name = device.name.isNotEmpty
+              ? device.name
+              : scanResult.advertisementData.localName.isNotEmpty
+              ? scanResult.advertisementData.localName
+              : 'Unknown Device';
+
           // 새로 발견된 장치만 추가
           if (!deviceList.contains(device)) {
             setState(() {
               deviceList.add(device);
+              print("Device found: $name, UUID: ${device.id}");
             });
           }
         }
@@ -140,23 +148,56 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
           }
         }
       }
+
+      // 연결 후 채팅창 표시
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Connected'),
+            content: ChatScreen(
+              writeCallback: (String message) => writeData(message), // 메시지를 보낼 수 있도록 콜백 전달
+            ), // 채팅창을 위한 커스텀 위젯
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Close'),
+              ),
+            ],
+          );
+        },
+      );
     });
   }
 
   // 데이터를 쓰는 함수
   void writeData(String data) async {
     if (_targetCharacteristic != null) {
-      List<int> bytes = utf8.encode(data);
-      await _targetCharacteristic!.write(bytes);
-      print('Data written: $data');
+      try {
+        List<int> bytes = utf8.encode(data);
+        await _targetCharacteristic!.write(bytes);
+        print('Data written: $data');
+      } catch (e) {
+        print("Write Error: $e");
+      }
+    } else {
+      print("No characteristic found for writing.");
     }
   }
 
   // 데이터를 읽는 함수
   void readData() async {
     if (_targetCharacteristic != null) {
-      var value = await _targetCharacteristic!.read();
-      print('Data read: ${utf8.decode(value)}');
+      try {
+        var value = await _targetCharacteristic!.read();
+        print('Data read: ${utf8.decode(value)}');
+      } catch (e) {
+        print("Read Error: $e");
+      }
+    } else {
+      print("No characteristic found for reading.");
     }
   }
 
@@ -218,6 +259,59 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// 간단한 채팅 UI를 위한 위젯
+class ChatScreen extends StatefulWidget {
+  final Function(String) writeCallback;
+
+  ChatScreen({required this.writeCallback});
+
+  @override
+  _ChatScreenState createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  List<String> messages = ["Device: Hi there!"];
+  TextEditingController _controller = TextEditingController();
+
+  void _sendMessage(String message) {
+    if (message.isNotEmpty) {
+      setState(() {
+        messages.add("You: $message");
+      });
+      widget.writeCallback(message); // 메시지 전송
+      _controller.clear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200, // 채팅창 높이 설정
+      child: Column(
+        children: <Widget>[
+          Expanded(
+            child: ListView.builder(
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(messages[index]),
+                );
+              },
+            ),
+          ),
+          TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Type your message...',
+            ),
+            onSubmitted: _sendMessage,
+          ),
+        ],
       ),
     );
   }
