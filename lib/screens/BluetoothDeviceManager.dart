@@ -37,8 +37,8 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     if (!_isScanning) {
       // 스캔 중이 아니라면 기존에 스캔된 리스트 삭제
       scanResultList.clear();
-      // 스캔 시작, 제한 시간 4초
-      flutterBlue.startScan(timeout: Duration(seconds: 4));
+      // 스캔 시작, 제한 시간 10초로 변경
+      flutterBlue.startScan(timeout: Duration(seconds: 10));
       // 스캔 결과 리스너
       flutterBlue.scanResults.listen((results) {
         setState(() {
