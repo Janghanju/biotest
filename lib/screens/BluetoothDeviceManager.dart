@@ -1,11 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
-import 'device.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothDeviceRegistration extends StatefulWidget {
-  final String title;
-
   BluetoothDeviceRegistration({Key? key, required this.title}) : super(key: key);
+  final String title;
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -13,16 +14,21 @@ class BluetoothDeviceRegistration extends StatefulWidget {
 
 class _MyHomePageState extends State<BluetoothDeviceRegistration> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
-  List<ScanResult> scanResultList = [];
   bool _isScanning = false;
+  BluetoothDevice? _connectedDevice;
+  List<BluetoothDevice> deviceList = [];
+  List<BluetoothService> _services = [];
+  String _statusText = '';
+  BluetoothCharacteristic? _targetCharacteristic;
 
   @override
   void initState() {
     super.initState();
-    // 블루투스 초기화
+    _checkPermissions();
     initBle();
   }
 
+  // BLE 초기화 함수
   void initBle() {
     // BLE 스캔 상태 얻기 위한 리스너
     flutterBlue.isScanning.listen((isScanning) {
@@ -32,80 +38,129 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     });
   }
 
-  // 스캔 시작/정지 함수
+  // 권한 확인 함수 권한 없으면 권한 요청 화면 표시, 안드로이드만 해당
+  _checkPermissions() async {
+    if (Platform.isAndroid) {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.location,
+        Permission.bluetoothScan,
+        Permission.bluetoothConnect,
+        Permission.bluetooth,
+      ].request();
+      print(statuses[Permission.location]);
+    }
+  }
+
+  // 장치 화면에 출력하는 위젯 함수
+  Widget list() {
+    return ListView.builder(
+      itemCount: deviceList.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          title: Text(deviceList[index].name),
+          subtitle: Text(deviceList[index].id.toString()),
+          onTap: () {
+            connect(deviceList[index]);
+          },
+        );
+      },
+    );
+  }
+
+  // 스캔 함수
   void scan() async {
     if (!_isScanning) {
-      // 스캔 중이 아니라면 기존에 스캔된 리스트 삭제
-      scanResultList.clear();
-      // 스캔 시작, 제한 시간 10초로 변경
-      flutterBlue.startScan(timeout: Duration(seconds: 10));
-      // 스캔 결과 리스너
-      flutterBlue.scanResults.listen((results) {
-        setState(() {
-          scanResultList = results;
-        });
+      deviceList.clear(); // 기존 장치 리스트 초기화
+      // 스캔 시작
+      await flutterBlue.startScan(timeout: Duration(seconds: 10));
+
+      // 스캔 결과 구독
+      flutterBlue.scanResults.listen((scanResults) {
+        for (ScanResult scanResult in scanResults) {
+          var device = scanResult.device;
+          // 새로 발견된 장치만 추가
+          if (!deviceList.contains(device)) {
+            setState(() {
+              deviceList.add(device);
+            });
+          }
+        }
+      });
+
+      setState(() {
+        _isScanning = true;
+        setBLEState('Scanning');
       });
     } else {
       // 스캔 중이라면 스캔 정지
       flutterBlue.stopScan();
+      setState(() {
+        _isScanning = false;
+        setBLEState('Stop Scan');
+      });
     }
   }
 
-  // 장치의 신호값 위젯
-  Widget deviceSignal(ScanResult r) {
-    return Text(r.rssi.toString());
-  }
-
-  // 장치의 MAC 주소 위젯
-  Widget deviceMacAddress(ScanResult r) {
-    return Text(r.device.id.toString());
-  }
-
-  // 장치의 명 위젯
-  Widget deviceName(ScanResult r) {
-    String name = '';
-
-    if (r.device.name.isNotEmpty) {
-      name = r.device.name;
-    } else if (r.advertisementData.localName.isNotEmpty) {
-      name = r.advertisementData.localName;
-    } else {
-      name = 'N/A';
+  // BLE 연결 시 예외 처리를 위한 래핑 함수
+  Future<void> _runWithErrorHandling(Future<void> Function() runFunction) async {
+    try {
+      await runFunction();
+    } catch (e) {
+      print("Error: $e");
     }
-    return Text(name);
   }
 
-  // BLE 아이콘 위젯
-  Widget leading(ScanResult r) {
-    return CircleAvatar(
-      child: Icon(
-        Icons.bluetooth,
-        color: Colors.white,
-      ),
-      backgroundColor: Colors.cyan,
-    );
+  // 상태 변경하면서 페이지도 갱신하는 함수
+  void setBLEState(String txt) {
+    setState(() => _statusText = txt);
   }
 
-  // 장치 아이템을 탭 했을때 호출 되는 함수
-  void onTap(ScanResult r) {
-    print('${r.device.name}');
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => DeviceScreen(device: r.device)),
-    );
+  // 연결 함수
+  void connect(BluetoothDevice device) async {
+    if (_connectedDevice != null) {
+      await _connectedDevice?.disconnect();
+      return;
+    }
+
+    _runWithErrorHandling(() async {
+      // 연결 시작
+      await device.connect();
+      setState(() {
+        _connectedDevice = device;
+        _statusText = 'Connected to ${device.name}';
+      });
+
+      // 서비스 및 캐릭터리스틱 검색
+      _services = await device.discoverServices();
+      for (var service in _services) {
+        for (var characteristic in service.characteristics) {
+          print('Characteristic: ${characteristic.uuid}');
+          if (characteristic.properties.write || characteristic.properties.read) {
+            _targetCharacteristic = characteristic;
+          }
+        }
+      }
+    });
   }
 
-  // 장치 아이템 위젯
-  Widget listItem(ScanResult r) {
-    return ListTile(
-      onTap: () => onTap(r),
-      leading: leading(r),
-      title: deviceName(r),
-      subtitle: deviceMacAddress(r),
-      trailing: deviceSignal(r),
-    );
+  // 데이터를 쓰는 함수
+  void writeData(String data) async {
+    if (_targetCharacteristic != null) {
+      List<int> bytes = utf8.encode(data);
+      await _targetCharacteristic!.write(bytes);
+      print('Data written: $data');
+    }
   }
 
+  // 데이터를 읽는 함수
+  void readData() async {
+    if (_targetCharacteristic != null) {
+      var value = await _targetCharacteristic!.read();
+      print('Data read: ${utf8.decode(value)}');
+    }
+  }
+
+  // 페이지 구성
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,22 +168,56 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
         title: Text(widget.title),
       ),
       body: Center(
-        // 장치 리스트 출력
-        child: ListView.separated(
-          itemCount: scanResultList.length,
-          itemBuilder: (context, index) {
-            return listItem(scanResultList[index]);
-          },
-          separatorBuilder: (BuildContext context, int index) {
-            return Divider();
-          },
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              flex: 1,
+              child: list(), // 리스트 출력
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: ElevatedButton( // scan 버튼
+                      onPressed: scan,
+                      child: Icon(_isScanning ? Icons.stop : Icons.bluetooth_searching),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton( // write 버튼
+                      onPressed: () => writeData("Your WiFi SSID and Password here"),
+                      child: Text("Write Data"),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton( // read 버튼
+                      onPressed: readData,
+                      child: Text("Read Data"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: <Widget>[
+                  Text("State : "),
+                  Expanded(
+                    child: Text(
+                      _statusText,
+                      overflow: TextOverflow.ellipsis, // 텍스트가 길 경우 말줄임표 처리
+                      maxLines: 1, // 최대 한 줄만 표시
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ),
-      // 장치 검색 or 검색 중지
-      floatingActionButton: FloatingActionButton(
-        onPressed: scan,
-        // 스캔 중이라면 stop 아이콘을, 정지상태라면 search 아이콘으로 표시
-        child: Icon(_isScanning ? Icons.stop : Icons.search),
       ),
     );
   }
