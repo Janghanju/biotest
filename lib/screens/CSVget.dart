@@ -2,6 +2,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DeviceRegistrationScreen extends StatefulWidget {
   @override
@@ -10,7 +11,6 @@ class DeviceRegistrationScreen extends StatefulWidget {
 
 class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
   String? selectedDeviceUUID;
-  String? selectedDeviceName;
   List<Map<String, String>> deviceList = [];
 
   @override
@@ -27,7 +27,6 @@ class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
       deviceList = firestoreDevices;
       if (deviceList.isNotEmpty) {
         selectedDeviceUUID = deviceList[0]['uuid']; // 기본적으로 첫 번째 UUID 선택
-        selectedDeviceName = deviceList[0]['name'];
       }
     });
   }
@@ -37,7 +36,7 @@ class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
     final firestoreRef = FirebaseFirestore.instance.collection('devices');
     final snapshot = await firestoreRef.get();
     for (var doc in snapshot.docs) {
-      devices.add({'uuid': doc.id, 'name': doc['name']});
+      devices.add({'uuid': doc.id});
     }
     return devices;
   }
@@ -45,13 +44,20 @@ class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
   Future<void> _downloadCSVFile() async {
     if (selectedDeviceUUID != null) {
       try {
+        // 사용자 ID 가져오기
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        if (userId == null) {
+          Fluttertoast.showToast(msg: "로그인이 필요합니다");
+          return;
+        }
+
         // Firebase Storage에서 파일 경로 지정
-        final storageRef = FirebaseStorage.instance.ref().child('csv_files/${selectedDeviceUUID}.csv');
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('users/$userId/devices/${selectedDeviceUUID}.csv');
         final downloadURL = await storageRef.getDownloadURL();
 
         // 다운로드 URL을 통해 CSV 파일 다운로드를 수행
-        // 일반적으로 다운로드는 특정 디렉토리에 저장하는 등의 추가 작업이 필요합니다.
-        // 여기에서는 간단히 URL을 출력하도록 하겠습니다.
         print('Download URL: $downloadURL');
 
         Fluttertoast.showToast(msg: "CSV 파일 다운로드 완료");
@@ -78,14 +84,12 @@ class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
               onChanged: (String? newUUID) {
                 setState(() {
                   selectedDeviceUUID = newUUID;
-                  selectedDeviceName = deviceList
-                      .firstWhere((device) => device['uuid'] == newUUID)['name'];
                 });
               },
               items: deviceList.map<DropdownMenuItem<String>>((device) {
                 return DropdownMenuItem<String>(
                   value: device['uuid'],
-                  child: Text('${device['name']} (${device['uuid']})'),
+                  child: Text('(${device['uuid']})'),
                 );
               }).toList(),
             ),
