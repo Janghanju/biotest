@@ -183,10 +183,7 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
                 shrinkWrap: true, // 필요한 크기에 맞게 자동으로 크기를 조절
                 children: <Widget>[
                   ListTile(
-                    title: Text('Device: Hi there!'),
-                  ),
-                  ListTile(
-                    title: Text('You: Hello!'),
+                    title: Text('성공적으로 연결되었습니다.'),
                   ),
                 ],
               ),
