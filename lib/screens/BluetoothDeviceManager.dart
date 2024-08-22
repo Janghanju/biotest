@@ -176,9 +176,21 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
         builder: (BuildContext context) {
           return AlertDialog(
             title: Text('Connected to ${device.name}'),
-            content: ChatScreen(
-              writeCallback: (String message) => writeData(message), // 메시지를 보낼 수 있도록 콜백 전달
-            ), // 채팅창을 위한 커스텀 위젯
+            content: Container(
+              height: 200, // 고정된 높이 설정
+              width: double.maxFinite, // 가능한 최대 너비 설정
+              child: ListView(
+                shrinkWrap: true, // 필요한 크기에 맞게 자동으로 크기를 조절
+                children: <Widget>[
+                  ListTile(
+                    title: Text('Device: Hi there!'),
+                  ),
+                  ListTile(
+                    title: Text('You: Hello!'),
+                  ),
+                ],
+              ),
+            ),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
@@ -241,21 +253,24 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
               child: Row(
                 children: <Widget>[
                   Expanded(
-                    child: ElevatedButton( // scan 버튼
+                    child: ElevatedButton(
+                      // scan 버튼
                       onPressed: scan,
                       child: Icon(_isScanning ? Icons.stop : Icons.bluetooth_searching),
                     ),
                   ),
                   SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton( // write 버튼
+                    child: ElevatedButton(
+                      // write 버튼
                       onPressed: () => writeData("Your WiFi SSID and Password here"),
                       child: Text("Write Data"),
                     ),
                   ),
                   SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton( // read 버튼
+                    child: ElevatedButton(
+                      // read 버튼
                       onPressed: readData,
                       child: Text("Read Data"),
                     ),
