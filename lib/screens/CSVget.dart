@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
 
 class DeviceRegistrationScreen extends StatefulWidget {
   @override
@@ -57,16 +60,39 @@ class _DeviceRegistrationScreenState extends State<DeviceRegistrationScreen> {
             .child('users/$userId/devices/${selectedDeviceUUID}.csv');
         final downloadURL = await storageRef.getDownloadURL();
 
-        // 다운로드 URL을 통해 CSV 파일 다운로드를 수행
-        print('Download URL: $downloadURL');
+        // 로컬 디렉토리에 저장 경로 생성
+        final directory = await getExternalStorageDirectory();
+        final filePath = '${directory?.path}/${selectedDeviceUUID}.csv';
 
-        Fluttertoast.showToast(msg: "CSV 파일 다운로드 완료");
+        // 다운로드 수행
+        await _downloadFile(downloadURL, filePath);
+
+        Fluttertoast.showToast(msg: "CSV 파일이 ${filePath}에 다운로드되었습니다.");
       } catch (e) {
         // 파일이 없을 경우 오류 처리
         Fluttertoast.showToast(msg: "파일이 없습니다");
       }
     } else {
       Fluttertoast.showToast(msg: "UUID가 선택되지 않았습니다");
+    }
+  }
+
+  Future<void> _downloadFile(String url, String savePath) async {
+    try {
+      // HTTP GET 요청으로 파일 다운로드
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        // 파일에 데이터 저장
+        final file = File(savePath);
+        await file.writeAsBytes(response.bodyBytes);
+        print('Download completed: $savePath');
+      } else {
+        print('Download failed: ${response.statusCode}');
+        Fluttertoast.showToast(msg: "다운로드 중 오류가 발생했습니다.");
+      }
+    } catch (e) {
+      print('Download error: $e');
+      Fluttertoast.showToast(msg: "다운로드 중 오류가 발생했습니다.");
     }
   }
 
