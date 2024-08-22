@@ -35,13 +35,23 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     initBle();
   }
 
+  @override
+  void dispose() {
+    // FlutterBlue와 관련된 리스너 또는 스트림을 정리
+    flutterBlue.stopScan();
+    _connectedDevice?.disconnect();
+    super.dispose();
+  }
+
   // BLE 초기화 함수
   void initBle() {
     // BLE 스캔 상태 얻기 위한 리스너
     flutterBlue.isScanning.listen((isScanning) {
-      setState(() {
-        _isScanning = isScanning;
-      });
+      if (mounted) {
+        setState(() {
+          _isScanning = isScanning;
+        });
+      }
     });
   }
 
@@ -93,16 +103,18 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
 
           // 새로 발견된 장치만 추가
           if (!deviceList.contains(device)) {
-            setState(() {
-              deviceList.add(device);
-              print("Device found: $name, UUID: ${device.id}");
-            });
+            if (mounted) {
+              setState(() {
+                deviceList.add(device);
+                print("Device found: $name, UUID: ${device.id}");
+              });
 
-            // 스캔 중지 및 연결 시도
-            flutterBlue.stopScan();
-            _isScanning = false;
-            setBLEState('Connecting to $name');
-            connect(device);
+              // 스캔 중지 및 연결 시도
+              flutterBlue.stopScan();
+              _isScanning = false;
+              setBLEState('Connecting to $name');
+              connect(device);
+            }
           }
         }
       });
@@ -132,7 +144,9 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
 
   // 상태 변경하면서 페이지도 갱신하는 함수
   void setBLEState(String txt) {
-    setState(() => _statusText = txt);
+    if (mounted) {
+      setState(() => _statusText = txt);
+    }
   }
 
   // 연결 함수
@@ -145,10 +159,12 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     _runWithErrorHandling(() async {
       // 연결 시작
       await device.connect();
-      setState(() {
-        _connectedDevice = device;
-        _statusText = 'Connected to ${device.name}';
-      });
+      if (mounted) {
+        setState(() {
+          _connectedDevice = device;
+          _statusText = 'Connected to ${device.name}';
+        });
+      }
 
       // 서비스 및 캐릭터리스틱 검색
       _services = await device.discoverServices();
@@ -171,34 +187,36 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
       }
 
       // 연결 후 채팅창 표시
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Connected to ${device.name}'),
-            content: Container(
-              height: 200, // 고정된 높이 설정
-              width: double.maxFinite, // 가능한 최대 너비 설정
-              child: ListView(
-                shrinkWrap: true, // 필요한 크기에 맞게 자동으로 크기를 조절
-                children: <Widget>[
-                  ListTile(
-                    title: Text('성공적으로 연결되었습니다.'),
-                  ),
-                ],
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Connected to ${device.name}'),
+              content: Container(
+                height: 200, // 고정된 높이 설정
+                width: double.maxFinite, // 가능한 최대 너비 설정
+                child: ListView(
+                  shrinkWrap: true, // 필요한 크기에 맞게 자동으로 크기를 조절
+                  children: <Widget>[
+                    ListTile(
+                      title: Text('성공적으로 연결되었습니다.'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('Close'),
-              ),
-            ],
-          );
-        },
-      );
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     });
   }
 
