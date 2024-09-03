@@ -17,6 +17,8 @@
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+    <string>Bluetooth is required for communication with devices.</string>
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>biotest</string>

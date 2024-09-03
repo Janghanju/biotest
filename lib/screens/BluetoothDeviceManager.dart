@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,24 +8,30 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
+import 'dart:typed_data';
 
 class BluetoothDeviceRegistration extends StatefulWidget {
   BluetoothDeviceRegistration({Key? key, required this.title}) : super(key: key);
   final String title;
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _BluetoothDeviceRegistrationState createState() => _BluetoothDeviceRegistrationState();
 }
 
-class _MyHomePageState extends State<BluetoothDeviceRegistration> {
+class _BluetoothDeviceRegistrationState extends State<BluetoothDeviceRegistration> {
   FlutterBlue flutterBlue = FlutterBlue.instance;
   bool _isScanning = false;
 
   BluetoothDevice? _connectedDevice;
+  BluetoothCharacteristic? _characteristic;
   List<BluetoothDevice> deviceList = [];
-  List<BluetoothService> _services = [];
-  String _statusText = '';
   BluetoothCharacteristic? _targetCharacteristic;
+
+  String _ssid = '';
+  String _password = '';
+  String _dataToSend = ''; // 사용자가 입력할 데이터를 저장할 변수
+  String _statusText = '';
+  bool _showWifiCredentials = false; // WiFi Credentials 입력창을 동적으로 보여주기 위한 변수
 
   @override
   void initState() {
@@ -37,15 +42,12 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
 
   @override
   void dispose() {
-    // FlutterBlue와 관련된 리스너 또는 스트림을 정리
     flutterBlue.stopScan();
-    _connectedDevice?.disconnect();
+    _disconnectDevice(); // 앱이 종료되거나 화면이 전환될 때 연결 해제
     super.dispose();
   }
 
-  // BLE 초기화 함수
   void initBle() {
-    // BLE 스캔 상태 얻기 위한 리스너
     flutterBlue.isScanning.listen((isScanning) {
       if (mounted) {
         setState(() {
@@ -55,7 +57,6 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     });
   }
 
-  // 권한 확인 함수 권한 없으면 권한 요청 화면 표시, 안드로이드만 해당
   _checkPermissions() async {
     if (Platform.isAndroid) {
       Map<Permission, PermissionStatus> statuses = await [
@@ -68,52 +69,20 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     }
   }
 
-  // 장치 화면에 출력하는 위젯 함수
-  Widget list() {
-    return ListView.builder(
-      itemCount: deviceList.length,
-      itemBuilder: (context, index) {
-        return ListTile(
-          title: Text(deviceList[index].name),
-          subtitle: Text(deviceList[index].id.toString()),
-          onTap: () {
-            connect(deviceList[index]);
-          },
-        );
-      },
-    );
-  }
-
-  // 스캔 함수
   void scan() async {
     if (!_isScanning) {
-      deviceList.clear(); // 기존 장치 리스트 초기화
-      // 스캔 시작
-      await flutterBlue.startScan(timeout: Duration(seconds: 10));
+      deviceList.clear();
+      flutterBlue.startScan(timeout: Duration(seconds: 10)); // void를 반환하므로 따로 처리하지 않음
 
-      // 스캔 결과 구독
       flutterBlue.scanResults.listen((scanResults) {
         for (ScanResult scanResult in scanResults) {
           var device = scanResult.device;
-          var name = device.name.isNotEmpty
-              ? device.name
-              : scanResult.advertisementData.localName.isNotEmpty
-              ? scanResult.advertisementData.localName
-              : 'Unknown Device';
-
-          // 새로 발견된 장치만 추가
           if (!deviceList.contains(device)) {
             if (mounted) {
               setState(() {
                 deviceList.add(device);
-                print("Device found: $name, UUID: ${device.id}");
+                print("Device found: ${device.name.isNotEmpty ? device.name : 'Unknown Device'}, UUID: ${device.id}");
               });
-
-              // 스캔 중지 및 연결 시도
-              flutterBlue.stopScan();
-              _isScanning = false;
-              setBLEState('Connecting to $name');
-              connect(device);
             }
           }
         }
@@ -124,8 +93,7 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
         setBLEState('Scanning');
       });
     } else {
-      // 스캔 중이라면 스캔 정지
-      flutterBlue.stopScan();
+      flutterBlue.stopScan(); // void를 반환하므로 따로 처리하지 않음
       setState(() {
         _isScanning = false;
         setBLEState('Stop Scan');
@@ -133,31 +101,23 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
     }
   }
 
-  // BLE 연결 시 예외 처리를 위한 래핑 함수
-  Future<void> _runWithErrorHandling(Future<void> Function() runFunction) async {
-    try {
-      await runFunction();
-    } catch (e) {
-      print("Error: $e");
-    }
-  }
-
-  // 상태 변경하면서 페이지도 갱신하는 함수
   void setBLEState(String txt) {
     if (mounted) {
       setState(() => _statusText = txt);
     }
   }
 
-  // 연결 함수
   void connect(BluetoothDevice device) async {
-    if (_connectedDevice != null) {
-      await _connectedDevice?.disconnect();
-      return;
-    }
+    try {
+      // 현재 연결 상태 확인
+      var connectionState = await device.state.first;
 
-    _runWithErrorHandling(() async {
-      // 연결 시작
+      if (connectionState == BluetoothDeviceState.connected) {
+        // 이미 연결된 경우, 연결 해제
+        await device.disconnect();
+        print("Existing connection with ${device.name} disconnected.");
+      }
+
       await device.connect();
       if (mounted) {
         setState(() {
@@ -166,13 +126,16 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
         });
       }
 
-      // 서비스 및 캐릭터리스틱 검색
-      _services = await device.discoverServices();
-      for (var service in _services) {
+      var services = await device.discoverServices();
+      for (var service in services) {
         for (var characteristic in service.characteristics) {
-          print('Characteristic: ${characteristic.uuid}');
           if (characteristic.properties.write || characteristic.properties.read) {
             _targetCharacteristic = characteristic;
+            if (characteristic.uuid.toString() == "6e400002-b5a3-f393-e0a9-e50e24dcca9e") {
+              setState(() {
+                _characteristic = characteristic;
+              });
+            }
           }
         }
       }
@@ -186,7 +149,12 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
         await DeviceRegistrationService().registerDeviceData(deviceUUID, userId);
       }
 
-      // 연결 후 채팅창 표시
+      setState(() {
+        _statusText = 'Ready to send data';
+        _showWifiCredentials = true; // WiFi Credentials 입력창을 표시
+      });
+
+      // 연결 후 알림창 표시
       if (mounted) {
         showDialog(
           context: context,
@@ -194,10 +162,10 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
             return AlertDialog(
               title: Text('Connected to ${device.name}'),
               content: Container(
-                height: 200, // 고정된 높이 설정
-                width: double.maxFinite, // 가능한 최대 너비 설정
+                height: 200,
+                width: double.maxFinite,
                 child: ListView(
-                  shrinkWrap: true, // 필요한 크기에 맞게 자동으로 크기를 조절
+                  shrinkWrap: true,
                   children: <Widget>[
                     ListTile(
                       title: Text('성공적으로 연결되었습니다.'),
@@ -217,150 +185,134 @@ class _MyHomePageState extends State<BluetoothDeviceRegistration> {
           },
         );
       }
-    });
-  }
-
-  // 데이터를 쓰는 함수
-  void writeData(String data) async {
-    if (_targetCharacteristic != null) {
-      try {
-        List<int> bytes = utf8.encode(data);
-        await _targetCharacteristic!.write(bytes);
-        print('Data written: $data');
-      } catch (e) {
-        print("Write Error: $e");
-      }
-    } else {
-      print("No characteristic found for writing.");
+    } catch (e) {
+      print("Error: $e");
+      setState(() {
+        _statusText = "Failed to connect: ${e.toString()}";
+      });
     }
   }
 
-  // 데이터를 읽는 함수
-  void readData() async {
-    if (_targetCharacteristic != null) {
+  void _disconnectDevice() async {
+    if (_connectedDevice != null) {
       try {
-        var value = await _targetCharacteristic!.read();
-        print('Data read: ${utf8.decode(value)}');
+        await _connectedDevice!.disconnect();
+        setState(() {
+          _connectedDevice = null;
+          _statusText = 'Disconnected';
+          _showWifiCredentials = false; // WiFi Credentials 입력창 숨기기
+        });
+        print("Device disconnected successfully.");
       } catch (e) {
-        print("Read Error: $e");
+        print("Error during disconnection: $e");
       }
-    } else {
-      print("No characteristic found for reading.");
     }
   }
 
-  // 페이지 구성
+  void sendWifiCredentials() async {
+    if (_characteristic != null) {
+      String data = "$_ssid,$_password";
+      List<int> bytes = utf8.encode(data);
+      await _characteristic!.write(bytes);
+      print("Data sent: $data");
+    }
+  }
+
+  void sendDataToDevice() async {
+    if (_characteristic != null && _dataToSend.isNotEmpty) {
+      List<int> bytes = utf8.encode(_dataToSend);
+      await _characteristic!.write(bytes);
+      print("Custom Data sent: $_dataToSend");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              flex: 1,
-              child: list(), // 리스트 출력
-            ),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: ElevatedButton(
-                      // scan 버튼
-                      onPressed: scan,
-                      child: Icon(_isScanning ? Icons.stop : Icons.bluetooth_searching),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      // write 버튼
-                      onPressed: () => writeData("Your WiFi SSID and Password here"),
-                      child: Text("Write Data"),
-                    ),
-                  ),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      // read 버튼
-                      onPressed: readData,
-                      child: Text("Read Data"),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: <Widget>[
-                  Text("State : "),
-                  Expanded(
-                    child: Text(
-                      _statusText,
-                      overflow: TextOverflow.ellipsis, // 텍스트가 길 경우 말줄임표 처리
-                      maxLines: 1, // 최대 한 줄만 표시
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// 간단한 채팅 UI를 위한 위젯
-class ChatScreen extends StatefulWidget {
-  final Function(String) writeCallback;
-
-  ChatScreen({required this.writeCallback});
-
-  @override
-  _ChatScreenState createState() => _ChatScreenState();
-}
-
-class _ChatScreenState extends State<ChatScreen> {
-  List<String> messages = ["Device: Hi there!"];
-  TextEditingController _controller = TextEditingController();
-
-  void _sendMessage(String message) {
-    if (message.isNotEmpty) {
-      setState(() {
-        messages.add("You: $message");
-      });
-      widget.writeCallback(message); // 메시지 전송
-      _controller.clear();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 200, // 채팅창 높이 설정
-      child: Column(
-        children: <Widget>[
+      resizeToAvoidBottomInset: true,
+      appBar: AppBar(title: Text(widget.title)),
+      body: Column(
+        children: [
           Expanded(
             child: ListView.builder(
-              itemCount: messages.length,
+              itemCount: deviceList.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Text(messages[index]),
+                  title: Text(deviceList[index].name.isNotEmpty ? deviceList[index].name : 'Unknown Device'),
+                  subtitle: Text(deviceList[index].id.toString()),
+                  onTap: () {
+                    connect(deviceList[index]);
+                  },
                 );
               },
             ),
           ),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: 'Type your message...',
+          ElevatedButton(
+            child: Text("Scan for Devices"),
+            onPressed: scan,
+          ),
+          if (_showWifiCredentials) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                decoration: InputDecoration(labelText: "SSID"),
+                onChanged: (value) {
+                  setState(() {
+                    _ssid = value;
+                  });
+                },
+              ),
             ),
-            onSubmitted: _sendMessage,
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                decoration: InputDecoration(labelText: "Password"),
+                obscureText: true,
+                onChanged: (value) {
+                  setState(() {
+                    _password = value;
+                  });
+                },
+              ),
+            ),
+            ElevatedButton(
+              child: Text("Send WiFi Credentials"),
+              onPressed: _connectedDevice != null ? sendWifiCredentials : null,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                decoration: InputDecoration(labelText: "Enter data to send"),
+                onChanged: (value) {
+                  setState(() {
+                    _dataToSend = value;
+                  });
+                },
+              ),
+            ),
+            ElevatedButton(
+              child: Text("Send Data"),
+              onPressed: _connectedDevice != null ? sendDataToDevice : null,
+            ),
+          ],
+          ElevatedButton(
+            child: Text("Disconnect"),
+            onPressed: _disconnectDevice,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: <Widget>[
+                Text("State : "),
+                Expanded(
+                  child: Text(
+                    _statusText,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -368,14 +320,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-// Realtime Database와 Firebase Storage에 데이터를 저장하는 서비스 클래스
 class DeviceRegistrationService {
-  // Realtime Database에 기기 데이터를 등록하고 Firestore와 동기화
   Future<void> registerDeviceData(String deviceUUID, String userId) async {
     try {
       final databaseRef = FirebaseDatabase.instance.ref('users/$userId/devices/$deviceUUID');
 
-      // 기기 데이터 초기 구조 (이후에 주기적으로 변경될 수 있음)
       Map<String, dynamic> deviceData = {
         "LED": true,
         "PH": 7.0,
@@ -397,16 +346,13 @@ class DeviceRegistrationService {
           "outTemp": 21.0,
           "outTemp2": 22.5
         },
-        "timestamp": DateTime.now().millisecondsSinceEpoch // 현재 시간으로 타임스탬프 설정
+        "timestamp": DateTime.now().millisecondsSinceEpoch
       };
 
-      // 데이터베이스에 저장
       await databaseRef.set(deviceData);
 
-      // Firestore와 동기화
       await _syncDataWithFirestore(deviceUUID, deviceData);
 
-      // CSV 파일 생성 및 Firebase Storage에 업로드
       await exportRealtimeDataToCsvAndUpload(deviceUUID, userId);
 
       print("Device data registered and CSV file uploaded successfully.");
@@ -415,7 +361,6 @@ class DeviceRegistrationService {
     }
   }
 
-  // 주기적으로 데이터를 가져와 CSV 파일로 저장 및 Firebase Storage에 업로드
   Future<void> exportRealtimeDataToCsvAndUpload(String deviceUUID, String userId) async {
     try {
       final databaseRef = FirebaseDatabase.instance.ref('users/$userId/devices/$deviceUUID');
@@ -424,7 +369,6 @@ class DeviceRegistrationService {
       if (snapshot.exists) {
         List<List<dynamic>> rows = [];
 
-        // CSV 파일에 추가할 데이터의 헤더
         rows.add([
           "Timestamp", "LED", "PH", "PH2", "RT_RPM", "RT_RPM2", "RT_Temp", "RT_Temp2", "UV",
           "set_RPM", "set_RPM2", "set_Temp", "set_Temp2", "temp/heatPow",
@@ -457,10 +401,8 @@ class DeviceRegistrationService {
 
         String csv = const ListToCsvConverter().convert(rows);
 
-        // CSV 데이터를 메모리에서 Uint8List로 변환
         Uint8List csvBytes = Uint8List.fromList(csv.codeUnits);
 
-        // Firebase Storage에 업로드
         final storageRef = FirebaseStorage.instance.ref().child("users/$userId/devices/$deviceUUID.csv");
         await storageRef.putData(csvBytes);
 
@@ -473,7 +415,6 @@ class DeviceRegistrationService {
     }
   }
 
-  // Firestore와 데이터 동기화
   Future<void> _syncDataWithFirestore(String deviceUUID, Map<String, dynamic> data) async {
     try {
       await FirebaseFirestore.instance
@@ -487,7 +428,6 @@ class DeviceRegistrationService {
     }
   }
 
-  // 초기 데이터 동기화 (선택사항)
   Future<void> syncInitialData() async {
     try {
       final databaseRef = FirebaseDatabase.instance.ref('devices');
@@ -501,7 +441,6 @@ class DeviceRegistrationService {
               .doc(uuid)
               .set(data, SetOptions(merge: true));
 
-          // 각 기기의 CSV 파일을 생성하고 Firebase Storage에 업로드
           await exportRealtimeDataToCsvAndUpload(uuid, uuid);
         });
         print("초기 데이터 동기화 완료 및 CSV 파일 생성 완료");
