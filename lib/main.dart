@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
         '/signIn': (context) => SignInScreen(),
         '/home': (context) => HomeScreen(title: 'Bio-reactor'),
         '/settings': (context) => SettingsScreen(),
-        '/device': (context) => BluetoothDeviceRegistration()
+        '/device': (context) => BluetoothDeviceRegistration(title: '',)
       },
     );
   }
