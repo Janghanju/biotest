@@ -77,6 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     // RTSP 스트림 URL로 비디오 플레이어 초기화
+    //_videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
     _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
       ..initialize().then((_) {
         setState(() {});
