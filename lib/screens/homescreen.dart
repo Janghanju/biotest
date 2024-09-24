@@ -78,12 +78,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // RTSP 스트림 URL로 비디오 플레이어 초기화
     //_videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://janghanju-server.laviewddns.com:8080/cmaf/biotest/index.m3u8"))
       ..initialize().then((_) {
         setState(() {});
         _videoPlayerController.play();
       }).catchError((error) {
         print('Video Player Initialization Error: $error');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load video: $error')),
+        );
       });
   }
 
@@ -318,9 +321,11 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               AspectRatio(
-                aspectRatio: _videoPlayerController.value.aspectRatio,
+                aspectRatio: _videoPlayerController.value.isInitialized
+                    ? _videoPlayerController.value.aspectRatio
+                    : 16/9, //초기값을 설정함
                 child: _videoPlayerController.value.isInitialized
-                    ? VideoPlayer(_videoPlayerController)
+                  ? VideoPlayer(_videoPlayerController)
                     : Center(child: CircularProgressIndicator()),
               ),
               Row(
@@ -559,26 +564,76 @@ class _HomeScreenState extends State<HomeScreen> {
     int selectedIndex = tempKeys.indexOf(selectedTemp);
     List<FlSpot> selectedSpots = tempSpots[selectedIndex];
 
-    return Container(
-      height: 400,
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(show: false),
-          titlesData: FlTitlesData(show: true),
-          borderData: FlBorderData(show: true),
-          lineBarsData: [
-            LineChartBarData(
-              spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
-              isCurved: true,
-              color: Colors.blue,
-              dotData: FlDotData(show: false),
-              belowBarData: BarAreaData(show: false),
+    // 그래프의 가로 길이를 데이터 길이에 따라 동적으로 설정
+    double graphWidth = selectedSpots.length * 20.0; // 데이터에 따라 가로 길이 조정
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal, // 가로 스크롤 가능하도록 설정
+      child: Container(
+        width: graphWidth > 350 ? graphWidth : 350, // 최소 너비 설정
+        height: 300,
+        child: LineChart(
+          LineChartData(
+            minX: 0,
+            maxX: selectedSpots.isNotEmpty ? selectedSpots.length.toDouble() : 30, // x축 범위 설정
+            minY: 0,
+            maxY: 100, // y축 범위 설정
+            gridData: FlGridData(show: false),  // 그리드 숨기기
+            titlesData: FlTitlesData(
+              show: true,
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true, // 아래 x축 숫자 표시
+                  reservedSize: 22,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(), // 숫자 값 표시
+                      style: TextStyle(
+                        fontSize: 10,  // 글자 크기
+                        color: Colors.black,  // 글자 색상
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true, // 왼쪽 y축 숫자 표시
+                  reservedSize: 40,
+                  getTitlesWidget: (value, meta) {
+                    return Text(
+                      value.toInt().toString(), // 숫자 값 표시
+                      style: TextStyle(
+                        fontSize: 10,  // 글자 크기
+                        color: Colors.black,  // 글자 색상
+                      ),
+                    );
+                  },
+                ),
+              ),
+              rightTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false), // 오른쪽 y축 숫자 숨기기
+              ),
+              topTitles: AxisTitles(
+                sideTitles: SideTitles(showTitles: false), // 위쪽 x축 숫자 숨기기
+              ),
             ),
-          ],
+            borderData: FlBorderData(show: true),  // 테두리 표시
+            lineBarsData: [
+              LineChartBarData(
+                spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
+                isCurved: true,
+                color: Colors.blue,
+                dotData: FlDotData(show: true),  // 데이터 포인트의 점 표시
+                belowBarData: BarAreaData(show: false),  // 아래 영역 숨기기
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   // 로그아웃 함수
   void logout(BuildContext context) async {
