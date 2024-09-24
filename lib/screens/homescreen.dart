@@ -24,7 +24,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DatabaseReference _databaseReference;
   Map<String, dynamic> _data = {};
-  List<List<FlSpot>> tempSpots = List.generate(14, (_) => <FlSpot>[]); // 온도 및 RPM 데이터 포인트 저장
+  List<List<FlSpot>> tempSpots = List.generate(
+      14, (_) => <FlSpot>[]); // 온도 및 RPM 데이터 포인트 저장
   double rtRPM1 = 0; // 실시간 RT RPM 값
   double rtRPM2 = 0.0; // 실시간 RT RPM2 값
   double setRPM1 = 0.0; // 설정된 RPM 값
@@ -78,7 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // RTSP 스트림 URL로 비디오 플레이어 초기화
     //_videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://210.99.70.120:1935/live/cctv010.stream/playlist.m3u8"))
-    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse("http://janghanju-server.laviewddns.com:8080/cmaf/biotest/index.m3u8"))
+    _videoPlayerController = VideoPlayerController.networkUrl(Uri.parse(
+        "http://janghanju-server.laviewddns.com:8080/cmaf/biotest/index.m3u8"))
       ..initialize().then((_) {
         setState(() {});
         _videoPlayerController.play();
@@ -93,13 +95,17 @@ class _HomeScreenState extends State<HomeScreen> {
   // 모든 값을 업데이트
   void _updateAllValues() {
     rtRPM1 = double.tryParse(_data['RT_RPM1']?.toString() ?? '0.0') ?? 0.0;
-    rtRPM2 = double.tryParse(_data['RT_RPM2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
+    rtRPM2 =
+        double.tryParse(_data['RT_RPM2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
     setRPM1 = double.tryParse(_data['set_RPM1']?.toString() ?? '0.0') ?? 0.0;
-    setRPM2 = double.tryParse(_data['set_RPM2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
+    setRPM2 =
+        double.tryParse(_data['set_RPM2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
     rtTemp1 = double.tryParse(_data['RT_Temp1']?.toString() ?? '0.0') ?? 0.0;
-    rtTemp2 = double.tryParse(_data['RT_Temp2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
+    rtTemp2 =
+        double.tryParse(_data['RT_Temp2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
     setTemp1 = double.tryParse(_data['set_Temp1']?.toString() ?? '0.0') ?? 0.0;
-    setTemp2 = double.tryParse(_data['set_Temp2']?.toString() ?? '0.0') ?? 0.0; // 추가된 값
+    setTemp2 = double.tryParse(_data['set_Temp2']?.toString() ?? '0.0') ??
+        0.0; // 추가된 값
     ph1 = double.tryParse(_data['PH1']?.toString() ?? '0.0') ?? 0.0;
     ph2 = double.tryParse(_data['PH2']?.toString() ?? '0.0') ?? 0.0;
     UV = _data['UV'] ?? false;
@@ -189,7 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       // 잘못된 범위 값 처리
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid temperature between 0 and 80.')),
+        SnackBar(content: Text(
+            'Please enter a valid temperature between 0 and 80.')),
       );
     }
   }
@@ -205,7 +212,8 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       // 잘못된 범위 값 처리
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a valid temperature between 0 and 80.')),
+        SnackBar(content: Text(
+            'Please enter a valid temperature between 0 and 80.')),
       );
     }
   }
@@ -291,14 +299,16 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.bluetooth),  // 아이콘을 블루투스 아이콘으로 변경
-              title: Text('Bluetooth Devices'),  // 텍스트를 'Bluetooth Devices'로 변경
+              leading: Icon(Icons.bluetooth), // 아이콘을 블루투스 아이콘으로 변경
+              title: Text('Bluetooth Devices'), // 텍스트를 'Bluetooth Devices'로 변경
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
 //                  MaterialPageRoute(builder: (context) => DeviceAddPage()),
-                  MaterialPageRoute(builder: (context) => BluetoothDeviceRegistration(title: 'Bluetooth Devices')), // BluetoothDeviceManager로 이동
+                  MaterialPageRoute(builder: (context) =>
+                      BluetoothDeviceRegistration(
+                          title: 'Bluetooth Devices')), // BluetoothDeviceManager로 이동
 
                 );
               },
@@ -308,7 +318,6 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Text('Logout'),
               onTap: () {
                 Navigator.pop(context);
-                logout(context);
               },
             ),
           ],
@@ -323,9 +332,9 @@ class _HomeScreenState extends State<HomeScreen> {
               AspectRatio(
                 aspectRatio: _videoPlayerController.value.isInitialized
                     ? _videoPlayerController.value.aspectRatio
-                    : 16/9, //초기값을 설정함
+                    : 16 / 9, //초기값을 설정함
                 child: _videoPlayerController.value.isInitialized
-                  ? VideoPlayer(_videoPlayerController)
+                    ? VideoPlayer(_videoPlayerController)
                     : Center(child: CircularProgressIndicator()),
               ),
               Row(
@@ -339,9 +348,12 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(child: DataItem(data: _data, dataKey: 'RT_Temp2')), // 추가된 UI 요소
-                  Expanded(child: DataItem(data: _data, dataKey: 'RT_RPM2')), // 추가된 UI 요소
-                  Expanded(child: DataItem(data: _data, dataKey: 'PH2')), // 대체된 UI 요소
+                  Expanded(child: DataItem(data: _data, dataKey: 'RT_Temp2')),
+                  // 추가된 UI 요소
+                  Expanded(child: DataItem(data: _data, dataKey: 'RT_RPM2')),
+                  // 추가된 UI 요소
+                  Expanded(child: DataItem(data: _data, dataKey: 'PH2')),
+                  // 대체된 UI 요소
                 ],
               ),
               SizedBox(height: 20),
@@ -356,7 +368,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT RPM1: ${rtRPM1.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT RPM1: ${rtRPM1.toStringAsFixed(1)}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)),
                         ControlSlider(
                           label: 'Set RPM1: ${userSetRPM1.toStringAsFixed(1)}',
                           value: userSetRPM1,
@@ -365,7 +379,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           onChanged: (value) {
                             setState(() {
                               userSetRPM1 = value;
-                              _motorRpmController1.text = userSetRPM1.toStringAsFixed(1);
+                              _motorRpmController1.text =
+                                  userSetRPM1.toStringAsFixed(1);
                             });
                           },
                         ),
@@ -378,7 +393,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 3000) {
+                            if (newValue != null && newValue >= 0 &&
+                                newValue <= 3000) {
                               setState(() {
                                 userSetRPM1 = newValue;
                               });
@@ -395,16 +411,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT Temp1: ${rtTemp1.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('RT Temp1: ${rtTemp1.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)),
                         ControlSlider(
-                          label: 'Set Temp1: ${userSetTemp1.toStringAsFixed(2)}',
+                          label: 'Set Temp1: ${userSetTemp1.toStringAsFixed(
+                              2)}',
                           value: userSetTemp1,
                           min: 0,
                           max: 80,
                           onChanged: (value) {
                             setState(() {
                               userSetTemp1 = value;
-                              _temperatureController1.text = userSetTemp1.toStringAsFixed(2);
+                              _temperatureController1.text =
+                                  userSetTemp1.toStringAsFixed(2);
                             });
                           },
                         ),
@@ -417,7 +437,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             double? newValue = double.tryParse(value);
-                            if (newValue != null && newValue >= 0 && newValue <= 80) {
+                            if (newValue != null && newValue >= 0 &&
+                                newValue <= 80) {
                               setState(() {
                                 userSetTemp1 = newValue;
                               });
@@ -434,12 +455,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('UV Status: ${UV ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('UV Status: ${UV ? "On" : "Off"}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)),
                         ElevatedButton(
                           onPressed: _toggleUV,
                           child: Text(UV ? 'Set UV Off' : 'Set UV On'),
                         ),
-                        Text('LED Status: ${LED ? "On" : "Off"}', style: TextStyle(fontSize: 16, color: Colors.black)),
+                        Text('LED Status: ${LED ? "On" : "Off"}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)),
                         ElevatedButton(
                           onPressed: _toggleLED,
                           child: Text(LED ? 'Set LED Off' : 'Set LED On'),
@@ -457,7 +482,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT RPM2: ${rtRPM2.toStringAsFixed(1)}', style: TextStyle(fontSize: 16, color: Colors.black)), // 실시간 RT RPM2 표시
+                        Text('RT RPM2: ${rtRPM2.toStringAsFixed(1)}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)), // 실시간 RT RPM2 표시
                         ControlSlider(
                           label: 'Set RPM2: ${userSetRPM2.toStringAsFixed(1)}',
                           value: userSetRPM2,
@@ -466,7 +493,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           onChanged: (value) {
                             setState(() {
                               userSetRPM2 = value;
-                              _motorRpmController2.text = userSetRPM2.toStringAsFixed(1);
+                              _motorRpmController2.text =
+                                  userSetRPM2.toStringAsFixed(1);
                             });
                           },
                         ),
@@ -479,7 +507,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             double? newValue2 = double.tryParse(value);
-                            if (newValue2 != null && newValue2 >= 0 && newValue2 <= 3000) {
+                            if (newValue2 != null && newValue2 >= 0 &&
+                                newValue2 <= 3000) {
                               setState(() {
                                 userSetRPM2 = newValue2;
                               });
@@ -496,16 +525,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        Text('RT Temp2: ${rtTemp2.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, color: Colors.black)), // 실시간 RT Temp2 표시
+                        Text('RT Temp2: ${rtTemp2.toStringAsFixed(2)}',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)), // 실시간 RT Temp2 표시
                         ControlSlider(
-                          label: 'Set Temp2: ${userSetTemp2.toStringAsFixed(2)}',
+                          label: 'Set Temp2: ${userSetTemp2.toStringAsFixed(
+                              2)}',
                           value: userSetTemp2,
                           min: 0,
                           max: 80,
                           onChanged: (value) {
                             setState(() {
                               userSetTemp2 = value;
-                              _temperatureController2.text = userSetTemp2.toStringAsFixed(2);
+                              _temperatureController2.text =
+                                  userSetTemp2.toStringAsFixed(2);
                             });
                           },
                         ),
@@ -518,7 +551,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             double? newValue2 = double.tryParse(value);
-                            if (newValue2 != null && newValue2 >= 0 && newValue2 <= 80) {
+                            if (newValue2 != null && newValue2 >= 0 &&
+                                newValue2 <= 80) {
                               setState(() {
                                 userSetTemp2 = newValue2;
                               });
@@ -559,13 +593,123 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // 그래프 위젯 생성
+//
+//   // 그래프 위젯 생성
+//   Widget _buildGraph() {
+//     int selectedIndex = tempKeys.indexOf(selectedTemp);
+//     List<FlSpot> selectedSpots = tempSpots[selectedIndex];
+//
+//     // 그래프의 가로 길이를 데이터 길이에 따라 동적으로 설정
+//     double graphWidth = selectedSpots.length * 20.0; // 데이터에 따라 가로 길이 조정
+//
+//     return SingleChildScrollView(
+//       scrollDirection: Axis.horizontal, // 가로 스크롤 가능하도록 설정
+//       child: Container(
+//         width: graphWidth > 350 ? graphWidth : 350, // 최소 너비 설정
+//         height: 300,
+//         child: LineChart(
+//           LineChartData(
+//             minX: 0,
+//             maxX: selectedSpots.isNotEmpty ? selectedSpots.length.toDouble() : 30, // x축 범위 설정
+//             minY: 0,
+//             maxY: 100, // y축 범위 설정
+//             gridData: FlGridData(show: false),  // 그리드 숨기기
+//             titlesData: FlTitlesData(
+//               show: true,
+//               bottomTitles: AxisTitles(
+//                 sideTitles: SideTitles(
+//                   showTitles: true, // 아래 x축 숫자 표시
+//                   reservedSize: 22,
+//                   getTitlesWidget: (value, meta) {
+//                     return Text(
+//                       value.toInt().toString(), // 숫자 값 표시
+//                       style: TextStyle(
+//                         fontSize: 10,  // 글자 크기
+//                         color: Colors.black,  // 글자 색상
+//                       ),
+//                     );
+//                   },
+//                 ),
+//               ),
+//               leftTitles: AxisTitles(
+//                 sideTitles: SideTitles(
+//                   showTitles: true, // 왼쪽 y축 숫자 표시
+//                   reservedSize: 40,
+//                   getTitlesWidget: (value, meta) {
+//                     return Text(
+//                       value.toInt().toString(), // 숫자 값 표시
+//                       style: TextStyle(
+//                         fontSize: 10,  // 글자 크기
+//                         color: Colors.black,  // 글자 색상
+//                       ),
+//                     );
+//                   },
+//                 ),
+//               ),
+//               rightTitles: AxisTitles(
+//                 sideTitles: SideTitles(showTitles: false), // 오른쪽 y축 숫자 숨기기
+//               ),
+//               topTitles: AxisTitles(
+//                 sideTitles: SideTitles(showTitles: false), // 위쪽 x축 숫자 숨기기
+//               ),
+//             ),
+//             borderData: FlBorderData(show: true),  // 테두리 표시
+//             lineBarsData: [
+//               LineChartBarData(
+//                 spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
+//                 isCurved: true,
+//                 color: Colors.blue,
+//                 dotData: FlDotData(show: true),  // 데이터 포인트의 점 표시
+//                 belowBarData: BarAreaData(show: false),  // 아래 영역 숨기기
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//
+//   // 로그아웃 함수
+//   void logout(BuildContext context) async {
+//     try {
+//       await FirebaseAuth.instance.signOut();
+//       Navigator.of(context).pushAndRemoveUntil(
+//         MaterialPageRoute(builder: (context) => LoginScreen()),
+//             (route) => false,
+//       );
+//     } catch (e) {
+//       print("Logout error :$e");
+//       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그아웃 실패')),
+//       );
+//     }
+//   }
+// }
+
   Widget _buildGraph() {
     int selectedIndex = tempKeys.indexOf(selectedTemp);
     List<FlSpot> selectedSpots = tempSpots[selectedIndex];
 
     // 그래프의 가로 길이를 데이터 길이에 따라 동적으로 설정
-    double graphWidth = selectedSpots.length * 20.0; // 데이터에 따라 가로 길이 조정
+    double graphWidth = selectedSpots.length * 20.0;
+
+    // y축 범위 자동 계산
+    double minY = selectedSpots.isNotEmpty
+        ? selectedSpots.map((spot) => spot.y).reduce((a, b) =>
+    a < b
+        ? a
+        : b) // 최소값 계산
+        : 0;
+    double maxY = selectedSpots.isNotEmpty
+        ? selectedSpots.map((spot) => spot.y).reduce((a, b) =>
+    a > b
+        ? a
+        : b) // 최대값 계산
+        : 100;
+
+    // 최소값과 최대값에 여유를 주기 위해 margin 추가
+    minY -= 10;
+    maxY += 10;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal, // 가로 스크롤 가능하도록 설정
@@ -575,10 +719,16 @@ class _HomeScreenState extends State<HomeScreen> {
         child: LineChart(
           LineChartData(
             minX: 0,
-            maxX: selectedSpots.isNotEmpty ? selectedSpots.length.toDouble() : 30, // x축 범위 설정
-            minY: 0,
-            maxY: 100, // y축 범위 설정
-            gridData: FlGridData(show: false),  // 그리드 숨기기
+            maxX: selectedSpots.isNotEmpty
+                ? selectedSpots.length.toDouble()
+                : 30,
+            // x축 범위 설정
+            minY: minY,
+            // 자동 계산된 y축 최소값
+            maxY: maxY,
+            // 자동 계산된 y축 최대값
+            gridData: FlGridData(show: false),
+            // 그리드 숨기기
             titlesData: FlTitlesData(
               show: true,
               bottomTitles: AxisTitles(
@@ -589,8 +739,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Text(
                       value.toInt().toString(), // 숫자 값 표시
                       style: TextStyle(
-                        fontSize: 10,  // 글자 크기
-                        color: Colors.black,  // 글자 색상
+                        fontSize: 10, // 글자 크기
+                        color: Colors.black, // 글자 색상
                       ),
                     );
                   },
@@ -602,10 +752,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
-                      value.toInt().toString(), // 숫자 값 표시
+                      value.toInt().toString(), // y축 숫자 값
                       style: TextStyle(
-                        fontSize: 10,  // 글자 크기
-                        color: Colors.black,  // 글자 색상
+                        fontSize: 10, // 글자 크기
+                        color: Colors.black, // 글자 색상
                       ),
                     );
                   },
@@ -618,35 +768,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 sideTitles: SideTitles(showTitles: false), // 위쪽 x축 숫자 숨기기
               ),
             ),
-            borderData: FlBorderData(show: true),  // 테두리 표시
+            borderData: FlBorderData(show: true),
+            // 테두리 표시
             lineBarsData: [
               LineChartBarData(
                 spots: selectedSpots.isEmpty ? [FlSpot(0, 0)] : selectedSpots,
                 isCurved: true,
                 color: Colors.blue,
-                dotData: FlDotData(show: true),  // 데이터 포인트의 점 표시
-                belowBarData: BarAreaData(show: false),  // 아래 영역 숨기기
+                dotData: FlDotData(show: true),
+                // 데이터 포인트의 점 표시
+                belowBarData: BarAreaData(show: false), // 아래 영역 숨기기
               ),
             ],
           ),
         ),
       ),
     );
-  }
-
-
-  // 로그아웃 함수
-  void logout(BuildContext context) async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => LoginScreen()),
-            (route) => false,
-      );
-    } catch (e) {
-      print("Logout error :$e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('로그아웃 실패')),
-      );
-    }
   }
 }
