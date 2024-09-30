@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _motorRpmController1 = TextEditingController();
   final TextEditingController _temperatureController2 = TextEditingController(); // 추가된 컨트롤러
   final TextEditingController _motorRpmController2 = TextEditingController(); // 추가된 컨트롤러
-
+//
   @override
   void initState() {
     super.initState();
