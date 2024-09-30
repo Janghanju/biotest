@@ -48,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String selectedTemp = 'RT_Temp1'; // 선택된 온도 키
   final List<String> tempKeys = [
-    'RT_Temp1', 'RT_RPM1', 'PH1', 'UV', 'LED', 'RT_Temp2', 'RT_RPM2', // 키 추가
-    'temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6', 'temp7'
+    'RT_Temp1', 'RT_RPM1', 'PH1', 'RT_Temp2', 'RT_RPM2', 'PH2', 'UV', 'LED'//, // 키 추가
+    //'temp1', 'temp2', 'temp3', 'temp4', 'temp5', 'temp6', 'temp7'
   ]; // 온도 및 RPM 키 목록
   final TextEditingController _temperatureController1 = TextEditingController();
   final TextEditingController _motorRpmController1 = TextEditingController();
@@ -224,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (newRpm >= 0 && newRpm <= 3000) {
       setState(() {
         userSetRPM1 = newRpm;
-        _databaseReference.child('set_RPM').set(userSetRPM1);
+        _databaseReference.child('set_RPM1').set(userSetRPM1);
       });
     } else {
       // 잘못된 범위 값 처리
@@ -349,11 +349,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   Expanded(child: DataItem(data: _data, dataKey: 'RT_Temp2')),
-                  // 추가된 UI 요소
                   Expanded(child: DataItem(data: _data, dataKey: 'RT_RPM2')),
-                  // 추가된 UI 요소
                   Expanded(child: DataItem(data: _data, dataKey: 'PH2')),
-                  // 대체된 UI 요소
                 ],
               ),
               SizedBox(height: 20),
