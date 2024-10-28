@@ -184,6 +184,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // CSV 다운로드
+  void _toggleCSV() {
+    // setState(() {
+    //   LED = !LED;
+    //   _databaseReference.child('LED').set(LED);
+    // });
+  }
+
   // 목표 온도 설정
   void _setTargetTemperature() {
     double newTemp = double.tryParse(_temperatureController1.text) ?? 0.0;
@@ -559,6 +567,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         ElevatedButton(
                           onPressed: _setTargetTemperature2,
                           child: Text('Set Temp2'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text('Download',
+                            style: TextStyle(fontSize: 16, color: Colors
+                                .black)),
+                        ElevatedButton(
+                          onPressed: _toggleCSV,
+                          child: Text("Data_CSV"),
                         ),
                       ],
                     ),
