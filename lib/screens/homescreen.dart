@@ -11,6 +11,9 @@ import '../services/notification.dart';
 import '../widgets/dataitem.dart';
 import '../widgets/control_slider.dart';
 import 'package:biotest/screens/BluetoothDeviceManager.dart'; // BluetoothDeviceManager 파일 import
+import 'package:http/http.dart' as http;
+import 'dart:io';
+
 
 class HomeScreen extends StatefulWidget {
   final String title;
@@ -185,11 +188,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // CSV 다운로드
-  void _toggleCSV() {
-    // setState(() {
-    //   LED = !LED;
-    //   _databaseReference.child('LED').set(LED);
-    // });
+  void _toggleCSV() async {
+    final url = Uri.parse("http://janghanju-server.laviewddns.com:3000/export-csv");
+
+    try {
+      // HTTP GET 요청
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        // 파일을 로컬 저장소에 저장 (예: Android의 다운로드 폴더 경로)
+        final directory = Directory('/storage/emulated/0/Download');
+        if (!await directory.exists()) {
+          await directory.create(recursive: true);
+        }
+        final filePath = '${directory.path}/output.csv';
+        final file = File(filePath);
+        await file.writeAsBytes(response.bodyBytes);
+
+        print("CSV 파일이 다운로드 되었습니다: $filePath");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("CSV 파일이 다운로드 되었습니다: $filePath")),
+        );
+      } else {
+        print("CSV 파일 다운로드 실패: ${response.statusCode}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("CSV 파일 다운로드 실패")),
+        );
+      }
+    } catch (e) {
+      print("오류 발생: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("CSV 파일 다운로드 중 오류 발생")),
+      );
+    }
   }
 
   // 목표 온도 설정
